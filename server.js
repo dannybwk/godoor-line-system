@@ -1,29 +1,15 @@
 const express = require('express');
 const cors = require('cors');
-const line = require('@line/bot-sdk');
-const { google } = require('googleapis');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// LINE Bot 設定
+// 簡單的 LINE Webhook 處理（不依賴 @line/bot-sdk）
 const config = {
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
   channelSecret: process.env.LINE_CHANNEL_SECRET
 };
-
-const client = new line.Client(config);
-
-// Google Sheets 設定
-let sheets;
-if (process.env.GOOGLE_CREDENTIALS) {
-  const googleAuth = new google.auth.GoogleAuth({
-    credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS),
-    scopes: ['https://www.googleapis.com/auth/spreadsheets']
-  });
-  sheets = google.sheets({ version: 'v4', auth: googleAuth });
-}
 
 // 健康檢查
 app.get('/', (req, res) => {
@@ -31,43 +17,14 @@ app.get('/', (req, res) => {
     status: 'OK', 
     message: 'GoDoor LINE System is running!',
     timestamp: new Date().toISOString(),
-    services: {
-      line: !!process.env.LINE_CHANNEL_ACCESS_TOKEN,
-      google: !!process.env.GOOGLE_CREDENTIALS,
-      sheets: !!sheets
+    config: {
+      hasAccessToken: !!config.channelAccessToken,
+      hasSecret: !!config.channelSecret
     }
   });
 });
 
-// 處理表單提交通知
-app.post('/webhook/form-submit', async (req, res) => {
-  try {
-    const formData = req.body;
-    console.log('收到表單提交:', formData);
-    
-    // 如果有 LINE 使用者 ID，發送確認訊息
-    if (formData.lineUserId && client) {
-      const confirmMessage = {
-        type: 'text',
-        text: `✅ 您的活動「${formData.eventName || '未命名活動'}」資料已收到！\n\n系統正在處理中，稍後會提供活動報名網址給您。`
-      };
-      
-      try {
-        await client.pushMessage(formData.lineUserId, confirmMessage);
-        console.log('確認訊息已發送');
-      } catch (lineError) {
-        console.error('發送 LINE 訊息失敗:', lineError);
-      }
-    }
-    
-    res.json({ success: true, message: '表單處理完成' });
-  } catch (error) {
-    console.error('處理表單提交錯誤:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 簡單的活動建立頁面（不使用 LIFF）
+// 活動建立頁面
 app.get('/create-event', (req, res) => {
   const formUrl = process.env.GOOGLE_FORM_URL || 'https://forms.google.com/';
   
@@ -137,88 +94,134 @@ app.get('/create-event', (req, res) => {
   `);
 });
 
-// LINE Webhook
-app.post('/webhook', line.middleware(config), (req, res) => {
-  Promise
-    .all(req.body.events.map(handleEvent))
-    .then((result) => res.json(result))
-    .catch((err) => {
-      console.error('Webhook 錯誤:', err);
-      res.status(500).end();
-    });
-});
-
-// 處理 LINE 事件
-async function handleEvent(event) {
-  console.log('收到 LINE 事件:', event);
-  
-  if (event.type === 'message' && event.message.type === 'text') {
-    const text = event.message.text;
-    const userId = event.source.userId;
-    
-    if (text.includes('建立活動') || text.includes('新增活動')) {
-      const replyMessage = {
-        type: 'template',
-        altText: '建立活動',
-        template: {
-          type: 'buttons',
-          title: '🎉 建立新活動',
-          text: '請點擊下方按鈕開始建立活動',
-          actions: [{
-            type: 'uri',
-            label: '開始建立活動',
-            uri: `https://${process.env.RENDER_EXTERNAL_URL || 'godoor-line-system.onrender.com'}/create-event`
-          }]
-        }
-      };
-      
-      return client.replyMessage(event.replyToken, replyMessage);
-    }
-    
-    if (text.includes('測試') || text === 'test') {
-      return client.replyMessage(event.replyToken, {
-        type: 'text',
-        text: `✅ 系統正常運作！\n您的 User ID: ${userId}\n\n請輸入「建立活動」來開始建立新活動。`
-      });
-    }
-    
-    // 預設回應
-    return client.replyMessage(event.replyToken, {
-      type: 'text',
-      text: `👋 您好！歡迎使用 GoDoor 活動小幫手！\n\n🎯 請輸入「建立活動」來開始建立新活動\n🔧 輸入「測試」來檢查系統狀態\n\n您的訊息：${text}`
-    });
-  }
-  
-  return Promise.resolve(null);
-}
-
-// 手動觸發活動檢查的 API
-app.post('/api/check-events', async (req, res) => {
+// 簡化的 LINE Webhook 處理
+app.post('/webhook', (req, res) => {
   try {
-    if (!sheets) {
-      throw new Error('Google Sheets 未設定');
-    }
+    console.log('收到 LINE Webhook:', JSON.stringify(req.body, null, 2));
     
-    // 讀取 Google Sheets 資料
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: process.env.GOOGLE_SPREADSHEET_ID,
-      range: '2025活動!A:Z'
-    });
+    // 簡單回應，確保返回 200 狀態碼
+    res.status(200).json({ success: true });
     
-    const rows = response.data.values;
-    console.log('Google Sheets 資料:', rows);
-    
-    res.json({ 
-      success: true, 
-      message: '檢查完成',
-      rowCount: rows ? rows.length : 0,
-      data: rows ? rows.slice(0, 3) : [] // 只顯示前3行作為範例
+    // 異步處理事件（不影響回應速度）
+    setImmediate(() => {
+      handleLineEvents(req.body);
     });
     
   } catch (error) {
-    console.error('檢查活動錯誤:', error);
+    console.error('Webhook 處理錯誤:', error);
+    res.status(200).json({ success: false, error: error.message });
+  }
+});
+
+// 處理 LINE 事件
+async function handleLineEvents(body) {
+  try {
+    if (!body.events || !Array.isArray(body.events)) {
+      console.log('沒有事件需要處理');
+      return;
+    }
+    
+    for (const event of body.events) {
+      await handleEvent(event);
+    }
+  } catch (error) {
+    console.error('處理 LINE 事件錯誤:', error);
+  }
+}
+
+// 處理單個事件
+async function handleEvent(event) {
+  try {
+    console.log('處理事件:', event);
+    
+    if (event.type === 'message' && event.message.type === 'text') {
+      const text = event.message.text;
+      const replyToken = event.replyToken;
+      
+      if (text.includes('建立活動') || text.includes('新增活動')) {
+        await sendReplyMessage(replyToken, {
+          type: 'template',
+          altText: '建立活動',
+          template: {
+            type: 'buttons',
+            title: '🎉 建立新活動',
+            text: '請點擊下方按鈕開始建立活動',
+            actions: [{
+              type: 'uri',
+              label: '開始建立活動',
+              uri: `${process.env.RENDER_EXTERNAL_URL || 'https://godoor-line-system.onrender.com'}/create-event`
+            }]
+          }
+        });
+      } else if (text.includes('測試') || text === 'test') {
+        await sendReplyMessage(replyToken, {
+          type: 'text',
+          text: `✅ 系統正常運作！\n您的 User ID: ${event.source.userId}\n\n請輸入「建立活動」來開始建立新活動。`
+        });
+      } else {
+        await sendReplyMessage(replyToken, {
+          type: 'text',
+          text: `👋 您好！歡迎使用 GoDoor 活動小幫手！\n\n🎯 請輸入「建立活動」來開始建立新活動\n🔧 輸入「測試」來檢查系統狀態\n\n您的訊息：${text}`
+        });
+      }
+    }
+  } catch (error) {
+    console.error('處理事件錯誤:', error);
+  }
+}
+
+// 發送回覆訊息
+async function sendReplyMessage(replyToken, message) {
+  try {
+    if (!config.channelAccessToken) {
+      console.error('缺少 LINE Channel Access Token');
+      return;
+    }
+    
+    const axios = require('axios');
+    const response = await axios.post(
+      'https://api.line.me/v2/bot/message/reply',
+      {
+        replyToken: replyToken,
+        messages: [message]
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${config.channelAccessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('回覆訊息發送成功:', response.status);
+  } catch (error) {
+    console.error('發送回覆訊息失敗:', error.response?.data || error.message);
+  }
+}
+
+// 處理表單提交通知
+app.post('/webhook/form-submit', async (req, res) => {
+  try {
+    const formData = req.body;
+    console.log('收到表單提交:', formData);
+    
+    res.json({ success: true, message: '表單處理完成' });
+  } catch (error) {
+    console.error('處理表單提交錯誤:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// 測試 API
+app.get('/test', (req, res) => {
+  res.json({
+    message: '測試成功！',
+    timestamp: new Date().toISOString(),
+    environment: {
+      NODE_ENV: process.env.NODE_ENV,
+      PORT: process.env.PORT
+    }
+  });
 });
 
 const PORT = process.env.PORT || 3000;
@@ -227,4 +230,5 @@ app.listen(PORT, () => {
   console.log(`📱 LINE Bot webhook: /webhook`);
   console.log(`📝 Form webhook: /webhook/form-submit`);
   console.log(`🎯 Create event page: /create-event`);
+  console.log(`🧪 Test endpoint: /test`);
 });
