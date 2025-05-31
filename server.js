@@ -1,8 +1,34 @@
-// 在您的 server.js 中，將這兩個函數替換掉原本的版本
+const express = require('express');
+const cors = require('cors');
+const axios = require('axios');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// LINE Bot 設定
+const config = {
+  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+  channelSecret: process.env.LINE_CHANNEL_SECRET
+};
+
+// 健康檢查
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'GoDoor LINE System is running!',
+    timestamp: new Date().toISOString(),
+    config: {
+      hasAccessToken: !!config.channelAccessToken,
+      hasSecret: !!config.channelSecret,
+      hasPrefillUrl: !!process.env.GOOGLE_FORM_PREFILL_URL,
+      hasFormUrl: !!process.env.GOOGLE_FORM_URL
+    }
+  });
+});
 
 // 活動建立頁面 - 支援使用者 ID 預填
 app.get('/create-event', (req, res) => {
-  // 從查詢參數取得使用者 ID
   const userId = req.query.userId || '';
   
   res.send(`
@@ -32,20 +58,9 @@ app.get('/create-event', (req, res) => {
                 max-width: 400px;
                 width: 90%;
             }
-            .logo {
-                font-size: 48px;
-                margin-bottom: 16px;
-            }
-            h1 {
-                color: #333;
-                margin-bottom: 16px;
-                font-size: 24px;
-            }
-            p {
-                color: #666;
-                margin-bottom: 24px;
-                line-height: 1.5;
-            }
+            .logo { font-size: 48px; margin-bottom: 16px; }
+            h1 { color: #333; margin-bottom: 16px; font-size: 24px; }
+            p { color: #666; margin-bottom: 24px; line-height: 1.5; }
             .btn {
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 color: white;
@@ -57,9 +72,7 @@ app.get('/create-event', (req, res) => {
                 transition: transform 0.2s;
                 margin-bottom: 16px;
             }
-            .btn:hover {
-                transform: translateY(-2px);
-            }
+            .btn:hover { transform: translateY(-2px); }
             .user-info {
                 background: #f8f9fa;
                 padding: 12px;
@@ -74,18 +87,9 @@ app.get('/create-event', (req, res) => {
                 border-radius: 8px;
                 font-size: 14px;
             }
-            .status.loading {
-                background: #e3f2fd;
-                color: #1976d2;
-            }
-            .status.success {
-                background: #e8f5e8;
-                color: #2e7d32;
-            }
-            .status.error {
-                background: #ffebee;
-                color: #c62828;
-            }
+            .status.loading { background: #e3f2fd; color: #1976d2; }
+            .status.success { background: #e8f5e8; color: #2e7d32; }
+            .status.error { background: #ffebee; color: #c62828; }
         </style>
     </head>
     <body>
@@ -107,19 +111,15 @@ app.get('/create-event', (req, res) => {
             `}
             
             <div id="status" class="status loading">正在準備表單連結...</div>
-            
             <a id="formLink" href="#" class="btn" style="display: none;">開始建立活動</a>
         </div>
 
         <script>
-            // 取得使用者 ID
             const userId = '${userId}';
             const statusDiv = document.getElementById('status');
             const formLink = document.getElementById('formLink');
-            
-            // 預填表單網址
-            const prefillFormUrl = '${process.env.GOOGLE_FORM_PREFILL_URL}';
-            const fallbackFormUrl = '${process.env.GOOGLE_FORM_URL}';
+            const prefillFormUrl = '${process.env.GOOGLE_FORM_PREFILL_URL || ''}';
+            const fallbackFormUrl = '${process.env.GOOGLE_FORM_URL || ''}';
             
             function updateStatus(message, type) {
                 statusDiv.textContent = message;
@@ -130,13 +130,10 @@ app.get('/create-event', (req, res) => {
                 try {
                     let finalFormUrl;
                     
-                    // 如果有使用者 ID 且有預填網址
                     if (userId && prefillFormUrl && prefillFormUrl.includes('entry.')) {
-                        // 替換預填的使用者 ID
                         finalFormUrl = prefillFormUrl.replace('USER_ID_PLACEHOLDER', encodeURIComponent(userId));
                         updateStatus('✅ 表單已準備好，將自動填入您的 LINE ID', 'success');
                     } else if (fallbackFormUrl) {
-                        // 使用原始表單網址
                         finalFormUrl = fallbackFormUrl;
                         if (userId) {
                             updateStatus('✅ 表單已準備好，請手動填入 LINE ID', 'success');
@@ -150,15 +147,12 @@ app.get('/create-event', (req, res) => {
                     formLink.href = finalFormUrl;
                     formLink.style.display = 'inline-block';
                     
-                    console.log('最終表單網址:', finalFormUrl);
-                    
                 } catch (error) {
                     console.error('設定表單連結失敗:', error);
                     updateStatus('❌ 準備表單時發生錯誤', 'error');
                 }
             }
             
-            // 頁面載入完成後設定表單連結
             window.onload = function() {
                 setTimeout(setupFormLink, 1000);
             };
@@ -168,7 +162,109 @@ app.get('/create-event', (req, res) => {
   `);
 });
 
-// 修改 LINE 事件處理，傳遞使用者 ID
+// 處理表單提交通知
+app.post('/webhook/form-submit', async (req, res) => {
+  try {
+    const formData = req.body;
+    console.log('=== 收到表單提交資料 ===');
+    console.log('資料:', JSON.stringify(formData, null, 2));
+    
+    const eventName = formData['活動名稱'] || '未命名活動';
+    const eventDate = formData['開始日期'] || '待定';
+    const eventLocation = formData['活動地點'] || '待定';
+    const organizer = formData['主辦單位'] || '未知';
+    const lineUserId = formData['LINE使用者ID'];
+    
+    console.log('活動名稱:', eventName);
+    console.log('LINE使用者ID:', lineUserId);
+    
+    if (lineUserId && lineUserId.trim() !== '') {
+      await sendLineMessage(lineUserId, {
+        type: 'text',
+        text: `✅ 您的活動資料已收到！\n\n📅 活動名稱：${eventName}\n📍 活動地點：${eventLocation}\n📊 主辦單位：${organizer}\n⏰ 開始日期：${eventDate}\n\n系統正在處理中，稍後會提供活動報名網址給您。感謝您的耐心等候！`
+      });
+      
+      console.log('✅ 確認訊息已發送給使用者');
+    } else {
+      console.log('⚠️ 沒有 LINE 使用者 ID，無法發送確認訊息');
+    }
+    
+    res.json({ 
+      success: true, 
+      message: '表單處理完成',
+      eventName: eventName,
+      hasLineUserId: !!lineUserId
+    });
+    
+  } catch (error) {
+    console.error('處理表單提交錯誤:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 發送 LINE 訊息
+async function sendLineMessage(userId, message) {
+  try {
+    if (!config.channelAccessToken) {
+      throw new Error('LINE Channel Access Token 未設定');
+    }
+    
+    const response = await axios.post(
+      'https://api.line.me/v2/bot/message/push',
+      {
+        to: userId,
+        messages: [message]
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${config.channelAccessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('LINE 訊息發送成功:', response.status);
+    return true;
+    
+  } catch (error) {
+    console.error('發送 LINE 訊息失敗:', error.response?.data || error.message);
+    return false;
+  }
+}
+
+// LINE Webhook 處理
+app.post('/webhook', (req, res) => {
+  try {
+    console.log('收到 LINE Webhook:', JSON.stringify(req.body, null, 2));
+    res.status(200).json({ success: true });
+    
+    setImmediate(() => {
+      handleLineEvents(req.body);
+    });
+    
+  } catch (error) {
+    console.error('Webhook 處理錯誤:', error);
+    res.status(200).json({ success: false, error: error.message });
+  }
+});
+
+// 處理 LINE 事件
+async function handleLineEvents(body) {
+  try {
+    if (!body.events || !Array.isArray(body.events)) {
+      console.log('沒有事件需要處理');
+      return;
+    }
+    
+    for (const event of body.events) {
+      await handleEvent(event);
+    }
+  } catch (error) {
+    console.error('處理 LINE 事件錯誤:', error);
+  }
+}
+
+// 處理單個事件
 async function handleEvent(event) {
   try {
     console.log('處理事件:', event);
@@ -179,7 +275,6 @@ async function handleEvent(event) {
       const userId = event.source.userId;
       
       if (text.includes('建立活動') || text.includes('新增活動')) {
-        // 建立包含使用者 ID 的連結
         const createEventUrl = `${process.env.RENDER_EXTERNAL_URL || 'https://godoor-line-system.onrender.com'}/create-event?userId=${encodeURIComponent(userId)}`;
         
         await sendReplyMessage(replyToken, {
@@ -212,3 +307,52 @@ async function handleEvent(event) {
     console.error('處理事件錯誤:', error);
   }
 }
+
+// 發送回覆訊息
+async function sendReplyMessage(replyToken, message) {
+  try {
+    if (!config.channelAccessToken) {
+      console.error('缺少 LINE Channel Access Token');
+      return;
+    }
+    
+    const response = await axios.post(
+      'https://api.line.me/v2/bot/message/reply',
+      {
+        replyToken: replyToken,
+        messages: [message]
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${config.channelAccessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('回覆訊息發送成功:', response.status);
+  } catch (error) {
+    console.error('發送回覆訊息失敗:', error.response?.data || error.message);
+  }
+}
+
+// 測試 API
+app.get('/test', (req, res) => {
+  res.json({
+    message: '測試成功！',
+    timestamp: new Date().toISOString(),
+    environment: {
+      NODE_ENV: process.env.NODE_ENV,
+      PORT: process.env.PORT
+    }
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server is running on port ${PORT}`);
+  console.log(`📱 LINE Bot webhook: /webhook`);
+  console.log(`📝 Form webhook: /webhook/form-submit`);
+  console.log(`🎯 Create event page: /create-event`);
+  console.log(`🧪 Test endpoint: /test`);
+});
