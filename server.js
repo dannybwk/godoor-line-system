@@ -206,8 +206,13 @@ app.post('/webhook/form-submit', async (req, res) => {
     const eventInfo = parseEventData(formData);
     console.log('解析的活動資訊:', eventInfo);
     
-    // 檢查使用者的選擇
-    const showInApp = formData['要將活動公開曝光到果多APP上嗎？'] === '要（果多APP和果多LINE上的推薦活動上可以看到此活動）';
+    // 檢查使用者的選擇 - 修正表單選項比對
+    const publicityChoice = formData['要將活動公開曝光到果多APP上嗎？'] || '';
+    console.log('原始選擇內容:', publicityChoice);
+    
+    // 支援多種可能的選項文字
+    const showInApp = publicityChoice.includes('要（') && 
+                     (publicityChoice.includes('果多APP') || publicityChoice.includes('推薦活動'));
     
     console.log('使用者選擇:', showInApp ? '要在APP中顯示' : '不要在APP中顯示（設為半公開）');
     
@@ -318,271 +323,336 @@ function parseEventData(formData) {
   };
 }
 
-// 修改版上架函數，支援半公開設定
+// 修改版上架函數，支援半公開設定（修正 Browserless 錯誤）
 async function uploadToGoDoorWithBrowserless(eventData, showInApp = true) {
   try {
     console.log('🚀 使用 Browserless 服務開始自動上架...');
     console.log('公開設定:', showInApp ? '完全公開（APP顯示）' : '半公開（不在APP顯示）');
     
-    // 建立 Puppeteer 腳本
+    // 清理和轉義字串以避免 JSON 錯誤
+    const cleanString = (str) => {
+      if (!str) return '';
+      return str.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '');
+    };
+    
+    const cleanEventData = {
+      name: cleanString(eventData.name),
+      description: cleanString(eventData.description),
+      startDate: cleanString(eventData.startDate),
+      startTime: cleanString(eventData.startTime),
+      endDate: cleanString(eventData.endDate || eventData.startDate),
+      endTime: cleanString(eventData.endTime || '18:00'),
+      location: cleanString(eventData.location),
+      address: cleanString(eventData.address),
+      organizer: cleanString(eventData.organizer),
+      maxParticipants: cleanString(eventData.maxParticipants || '50'),
+      price: cleanString(eventData.price || '0'),
+      phone: cleanString(eventData.phone),
+      email: cleanString(eventData.email)
+    };
+    
+    // 建立 Puppeteer 腳本 - 修正格式
     const puppeteerScript = `
-      const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer');
+
+(async () => {
+  const browser = await puppeteer.launch({
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+  });
+  const page = await browser.newPage();
+  
+  try {
+    console.log('開始自動上架流程...');
+    
+    // 設定較長的超時時間
+    page.setDefaultTimeout(30000);
+    
+    // 前往果多後台
+    await page.goto('${goDoorConfig.baseUrl}', { 
+      waitUntil: 'networkidle2',
+      timeout: 30000 
+    });
+    
+    console.log('已到達果多後台');
+    
+    // 檢查是否需要登入
+    await page.waitForTimeout(2000);
+    const needLogin = await page.$('input[type="password"]') !== null;
+    
+    if (needLogin) {
+      console.log('需要登入，開始填入帳號密碼...');
       
-      (async () => {
-        const browser = await puppeteer.launch({
-          args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
-        const page = await browser.newPage();
+      // 等待並填入登入資訊
+      try {
+        await page.waitForSelector('input[type="text"], input[name*="user"], input[name*="account"]', { timeout: 10000 });
+        await page.type('input[type="text"], input[name*="user"], input[name*="account"]', '${goDoorConfig.username}');
         
+        await page.waitForSelector('input[type="password"]', { timeout: 5000 });
+        await page.type('input[type="password"]', '${goDoorConfig.password}');
+        
+        console.log('已填入登入資訊，點擊登入按鈕...');
+        
+        // 點擊登入
+        const loginButton = await page.$('button[type="submit"], input[type="submit"]');
+        if (loginButton) {
+          await loginButton.click();
+          await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 });
+          console.log('登入成功');
+        }
+      } catch (loginError) {
+        console.log('登入過程發生錯誤:', loginError.message);
+      }
+    } else {
+      console.log('已經登入狀態');
+    }
+    
+    // 尋找新增活動功能
+    console.log('尋找新增活動功能...');
+    await page.waitForTimeout(3000);
+    
+    // 嘗試多種方式找到新增活動按鈕
+    let foundCreateButton = false;
+    
+    try {
+      // 方法1: 尋找包含"活動"和"新增"的按鈕
+      const allButtons = await page.$('a, button');
+      for (let button of allButtons) {
+        const text = await page.evaluate(el => el.textContent.toLowerCase(), button);
+        if (text.includes('活動') && (text.includes('新增') || text.includes('創建') || text.includes('建立'))) {
+          await button.click();
+          foundCreateButton = true;
+          console.log('找到並點擊新增活動按鈕:', text);
+          break;
+        }
+      }
+      
+      // 方法2: 如果沒找到，嘗試直接導航到新增頁面
+      if (!foundCreateButton) {
+        console.log('未找到新增按鈕，嘗試直接導航...');
+        await page.goto('${goDoorConfig.baseUrl}/events/create', { 
+          waitUntil: 'networkidle2',
+          timeout: 20000 
+        });
+        foundCreateButton = true;
+      }
+    } catch (navError) {
+      console.log('導航錯誤:', navError.message);
+    }
+    
+    await page.waitForTimeout(3000);
+    console.log('準備填寫表單...');
+    
+    // 填寫活動表單
+    const fieldsToFill = {
+      '活動名稱': '${cleanEventData.name}',
+      '活動描述': '${cleanEventData.description}',
+      '開始日期': '${cleanEventData.startDate}',
+      '開始時間': '${cleanEventData.startTime}',
+      '結束日期': '${cleanEventData.endDate}',
+      '結束時間': '${cleanEventData.endTime}',
+      '活動地點': '${cleanEventData.location}',
+      '地址': '${cleanEventData.address}',
+      '主辦單位': '${cleanEventData.organizer}',
+      '人數上限': '${cleanEventData.maxParticipants}',
+      '活動費用': '${cleanEventData.price}',
+      '聯絡電話': '${cleanEventData.phone}',
+      '聯絡信箱': '${cleanEventData.email}'
+    };
+    
+    // 填寫所有欄位
+    let fieldsFilledCount = 0;
+    for (const [fieldName, value] of Object.entries(fieldsToFill)) {
+      if (value && value.trim() !== '') {
         try {
-          console.log('開始自動上架流程...');
+          // 嘗試多種選擇器
+          const selectors = [
+            \`input[name*="\${fieldName}"]\`,
+            \`textarea[name*="\${fieldName}"]\`,
+            \`input[placeholder*="\${fieldName}"]\`,
+            \`textarea[placeholder*="\${fieldName}"]\`,
+            \`input[id*="\${fieldName}"]\`,
+            \`textarea[id*="\${fieldName}"]\`
+          ];
           
-          // 前往果多後台
-          await page.goto('${goDoorConfig.baseUrl}', { 
-            waitUntil: 'networkidle2',
-            timeout: 30000 
-          });
-          
-          console.log('已到達果多後台');
-          
-          // 檢查是否需要登入
-          const needLogin = await page.$('input[type="password"]') !== null;
-          
-          if (needLogin) {
-            console.log('需要登入，開始填入帳號密碼...');
-            
-            // 等待並填入登入資訊
-            await page.waitForSelector('input[type="text"], input[name*="user"], input[name*="account"]', { timeout: 10000 });
-            await page.type('input[type="text"], input[name*="user"], input[name*="account"]', '${goDoorConfig.username}');
-            
-            await page.waitForSelector('input[type="password"]', { timeout: 5000 });
-            await page.type('input[type="password"]', '${goDoorConfig.password}');
-            
-            console.log('已填入登入資訊，點擊登入按鈕...');
-            
-            // 點擊登入
-            const loginButton = await page.$('button[type="submit"], input[type="submit"], button:has-text("登入"), button:has-text("登錄")');
-            if (loginButton) {
-              await loginButton.click();
-              await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 });
-              console.log('登入成功');
-            }
-          } else {
-            console.log('已經登入狀態');
-          }
-          
-          // 尋找新增活動功能
-          console.log('尋找新增活動功能...');
-          await page.waitForTimeout(2000);
-          
-          // 嘗試多種方式找到新增活動按鈕
-          let foundCreateButton = false;
-          
-          // 方法1: 尋找包含"活動"和"新增"的按鈕
-          const allButtons = await page.$$('a, button');
-          for (let button of allButtons) {
-            const text = await page.evaluate(el => el.textContent.toLowerCase(), button);
-            if (text.includes('活動') && (text.includes('新增') || text.includes('創建') || text.includes('建立'))) {
-              await button.click();
-              foundCreateButton = true;
-              console.log('找到並點擊新增活動按鈕:', text);
+          let fieldFound = false;
+          for (const selector of selectors) {
+            const field = await page.$(selector);
+            if (field) {
+              await field.click();
+              await field.focus();
+              // 清空欄位
+              await page.keyboard.down('Control');
+              await page.keyboard.press('KeyA');
+              await page.keyboard.up('Control');
+              await field.type(value, { delay: 50 });
+              console.log(\`已填寫 \${fieldName}: \${value.substring(0, 50)}...\`);
+              fieldsFilledCount++;
+              fieldFound = true;
               break;
             }
           }
           
-          // 方法2: 如果沒找到，嘗試直接導航到新增頁面
-          if (!foundCreateButton) {
-            console.log('未找到新增按鈕，嘗試直接導航...');
-            await page.goto('${goDoorConfig.baseUrl}/events/create', { waitUntil: 'networkidle2' });
+          if (!fieldFound) {
+            console.log(\`未找到欄位: \${fieldName}\`);
           }
-          
-          await page.waitForTimeout(3000);
-          console.log('準備填寫表單...');
-          
-          // 填寫活動表單
-          const fieldsToFill = {
-            '活動名稱': '${eventData.name.replace(/'/g, "\\'")}',
-            '活動描述': '${(eventData.description || '').replace(/'/g, "\\'")}',
-            '開始日期': '${eventData.startDate}',
-            '開始時間': '${eventData.startTime}',
-            '結束日期': '${eventData.endDate || eventData.startDate}',
-            '結束時間': '${eventData.endTime || '18:00'}',
-            '活動地點': '${(eventData.location || '').replace(/'/g, "\\'")}',
-            '地址': '${(eventData.address || '').replace(/'/g, "\\'")}',
-            '主辦單位': '${(eventData.organizer || '').replace(/'/g, "\\'")}',
-            '人數上限': '${eventData.maxParticipants || '50'}',
-            '活動費用': '${eventData.price || '0'}',
-            '聯絡電話': '${eventData.phone || ''}',
-            '聯絡信箱': '${eventData.email || ''}'
-          };
-          
-          // 填寫所有欄位
-          for (const [fieldName, value] of Object.entries(fieldsToFill)) {
-            if (value && value.trim() !== '') {
-              try {
-                // 嘗試多種選擇器
-                const selectors = [
-                  \`input[name*="\${fieldName}"], textarea[name*="\${fieldName}"], select[name*="\${fieldName}"]\`,
-                  \`input[placeholder*="\${fieldName}"], textarea[placeholder*="\${fieldName}"]\`,
-                  \`input[id*="\${fieldName}"], textarea[id*="\${fieldName}"]\`
-                ];
-                
-                let fieldFound = false;
-                for (const selector of selectors) {
-                  const field = await page.$(selector);
-                  if (field) {
-                    await field.click();
-                    await field.focus();
-                    await page.keyboard.down('Control');
-                    await page.keyboard.press('KeyA');
-                    await page.keyboard.up('Control');
-                    await field.type(value);
-                    console.log(\`已填寫 \${fieldName}: \${value}\`);
-                    fieldFound = true;
-                    break;
-                  }
-                }
-                
-                if (!fieldFound) {
-                  console.log(\`未找到欄位: \${fieldName}\`);
-                }
-              } catch (e) {
-                console.log(\`填寫 \${fieldName} 時發生錯誤:, e.message\`);
-              }
-            }
-          }
-          
-          // 重要：設定公開程度
-          const showInApp = ${showInApp};
-          console.log('設定公開程度:', showInApp ? '完全公開' : '半公開');
-          
-          if (!showInApp) {
-            // 尋找並勾選"半公開"選項
-            try {
-              // 嘗試找到半公開的選項
-              const visibilityOptions = await page.$$('input[type="radio"], input[type="checkbox"], select option');
-              
-              for (let option of visibilityOptions) {
-                const text = await page.evaluate(el => {
-                  return el.textContent || el.value || el.getAttribute('aria-label') || '';
-                }, option);
-                
-                if (text.includes('半公開') || text.includes('不公開') || text.includes('私人')) {
-                  if (option.type === 'radio' || option.type === 'checkbox') {
-                    await option.click();
-                    console.log('已選擇半公開選項:', text);
-                  }
-                  break;
-                }
-              }
-              
-              // 也檢查下拉選單
-              const selectElements = await page.$$('select');
-              for (let select of selectElements) {
-                const options = await select.$$('option');
-                for (let option of options) {
-                  const text = await page.evaluate(el => el.textContent, option);
-                  if (text.includes('半公開')) {
-                    const value = await page.evaluate(el => el.value, option);
-                    await page.select(select, value);
-                    console.log('已選擇半公開選項:', text);
-                    break;
-                  }
-                }
-              }
-            } catch (e) {
-              console.log('設定半公開時發生錯誤:', e.message);
-            }
-          }
-          
-          console.log('準備提交表單...');
-          
-          // 提交表單
-          const submitSelectors = [
-            'button[type="submit"]',
-            'input[type="submit"]', 
-            'button:has-text("提交")',
-            'button:has-text("保存")',
-            'button:has-text("確定")',
-            'button:has-text("送出")',
-            'button:has-text("建立")',
-            'button:has-text("新增")'
-          ];
-          
-          let submitted = false;
-          for (const selector of submitSelectors) {
-            try {
-              const submitButton = await page.$(selector);
-              if (submitButton) {
-                await submitButton.click();
-                console.log('已點擊提交按鈕:', selector);
-                submitted = true;
-                break;
-              }
-            } catch (e) {
-              console.log(\`嘗試 \${selector} 失敗:, e.message\`);
-            }
-          }
-          
-          if (!submitted) {
-            console.log('未找到提交按鈕，嘗試按 Enter');
-            await page.keyboard.press('Enter');
-          }
-          
-          // 等待提交完成
-          await page.waitForTimeout(5000);
-          console.log('表單提交完成，準備取得活動網址...');
-          
-          // 取得活動網址
-          let eventUrl = page.url();
-          console.log('當前頁面網址:', eventUrl);
-          
-          // 如果當前網址不包含 event，嘗試尋找活動連結
-          if (!eventUrl.includes('/event/') && !eventUrl.includes('/register/')) {
-            console.log('當前網址不是活動頁面，尋找活動連結...');
-            
-            const eventLinks = await page.$$('a[href*="/event/"], a[href*="/register/"]');
-            if (eventLinks.length > 0) {
-              eventUrl = await page.evaluate(el => el.href, eventLinks[eventLinks.length - 1]);
-              console.log('找到活動連結:', eventUrl);
-            } else {
-              // 生成預設的活動網址格式
-              const eventId = Date.now();
-              eventUrl = \`\${goDoorConfig.baseUrl}/event/register/\${eventId}\`;
-              console.log('生成預設活動網址:', eventUrl);
-            }
-          }
-          
-          console.log('最終活動網址:', eventUrl);
-          
-          // 返回結果
-          console.log(JSON.stringify({ 
-            success: true, 
-            eventUrl: eventUrl,
-            showInApp: showInApp,
-            visibility: showInApp ? '完全公開' : '半公開'
-          }));
-          
-        } catch (error) {
-          console.log('自動上架過程發生錯誤:', error.message);
-          console.log(JSON.stringify({ 
-            success: false, 
-            error: error.message 
-          }));
-        } finally {
-          await browser.close();
-          console.log('瀏覽器已關閉');
+        } catch (e) {
+          console.log(\`填寫 \${fieldName} 時發生錯誤: \${e.message}\`);
         }
-      })();
+      }
+    }
+    
+    console.log(\`總共填寫了 \${fieldsFilledCount} 個欄位\`);
+    
+    // 重要：設定公開程度
+    const showInApp = ${showInApp};
+    console.log('設定公開程度:', showInApp ? '完全公開' : '半公開');
+    
+    if (!showInApp) {
+      // 尋找並勾選"半公開"選項
+      try {
+        console.log('開始尋找半公開選項...');
+        
+        // 嘗試找到半公開的選項
+        const visibilityOptions = await page.$('input[type="radio"], input[type="checkbox"]');
+        
+        for (let option of visibilityOptions) {
+          const labelText = await page.evaluate(el => {
+            const label = el.closest('label') || document.querySelector(\`label[for="\${el.id}"]\`);
+            return label ? label.textContent : '';
+          }, option);
+          
+          const optionText = await page.evaluate(el => {
+            return el.value || el.getAttribute('aria-label') || '';
+          }, option);
+          
+          const combinedText = (labelText + ' ' + optionText).toLowerCase();
+          
+          if (combinedText.includes('半公開') || combinedText.includes('不公開') || combinedText.includes('私人') || combinedText.includes('限制')) {
+            await option.click();
+            console.log('已選擇半公開選項:', combinedText);
+            break;
+          }
+        }
+        
+        // 也檢查下拉選單
+        const selectElements = await page.$('select');
+        for (let select of selectElements) {
+          const options = await select.$('option');
+          for (let option of options) {
+            const text = await page.evaluate(el => el.textContent.toLowerCase(), option);
+            if (text.includes('半公開') || text.includes('不公開')) {
+              const value = await page.evaluate(el => el.value, option);
+              await page.select(select, value);
+              console.log('已選擇半公開選項:', text);
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        console.log('設定半公開時發生錯誤:', e.message);
+      }
+    }
+    
+    console.log('準備提交表單...');
+    
+    // 提交表單
+    const submitSelectors = [
+      'button[type="submit"]',
+      'input[type="submit"]', 
+      'button:contains("提交")',
+      'button:contains("保存")',
+      'button:contains("確定")',
+      'button:contains("送出")',
+      'button:contains("建立")',
+      'button:contains("新增")'
+    ];
+    
+    let submitted = false;
+    for (const selector of submitSelectors) {
+      try {
+        const submitButton = await page.$(selector);
+        if (submitButton) {
+          await submitButton.click();
+          console.log('已點擊提交按鈕:', selector);
+          submitted = true;
+          break;
+        }
+      } catch (e) {
+        console.log(\`嘗試 \${selector} 失敗: \${e.message}\`);
+      }
+    }
+    
+    if (!submitted) {
+      console.log('未找到提交按鈕，嘗試按 Enter');
+      await page.keyboard.press('Enter');
+    }
+    
+    // 等待提交完成
+    await page.waitForTimeout(5000);
+    console.log('表單提交完成，準備取得活動網址...');
+    
+    // 取得活動網址
+    let eventUrl = page.url();
+    console.log('當前頁面網址:', eventUrl);
+    
+    // 如果當前網址不包含 event，嘗試尋找活動連結
+    if (!eventUrl.includes('/event/') && !eventUrl.includes('/register/')) {
+      console.log('當前網址不是活動頁面，尋找活動連結...');
+      
+      try {
+        const eventLinks = await page.$('a[href*="/event/"], a[href*="/register/"]');
+        if (eventLinks.length > 0) {
+          eventUrl = await page.evaluate(el => el.href, eventLinks[eventLinks.length - 1]);
+          console.log('找到活動連結:', eventUrl);
+        } else {
+          // 生成預設的活動網址格式
+          const eventId = Date.now();
+          eventUrl = '${goDoorConfig.baseUrl}/event/register/' + eventId;
+          console.log('生成預設活動網址:', eventUrl);
+        }
+      } catch (e) {
+        console.log('尋找活動連結時發生錯誤:', e.message);
+        eventUrl = '${goDoorConfig.baseUrl}/events';
+      }
+    }
+    
+    console.log('最終活動網址:', eventUrl);
+    
+    // 返回結果
+    const result = { 
+      success: true, 
+      eventUrl: eventUrl,
+      showInApp: showInApp,
+      visibility: showInApp ? '完全公開' : '半公開',
+      fieldsFilledCount: fieldsFilledCount
+    };
+    
+    console.log(JSON.stringify(result));
+    
+  } catch (error) {
+    console.log('自動上架過程發生錯誤:', error.message);
+    const errorResult = { 
+      success: false, 
+      error: error.message 
+    };
+    console.log(JSON.stringify(errorResult));
+  } finally {
+    await browser.close();
+    console.log('瀏覽器已關閉');
+  }
+})();
     `;
     
     // 發送到 Browserless
     console.log('發送腳本到 Browserless...');
+    console.log('腳本長度:', puppeteerScript.length, '字符');
+    
     const response = await axios.post(
       `${browserlessConfig.baseUrl}/function?token=${browserlessConfig.token}`,
       {
         code: puppeteerScript,
-        context: {}
+        context: {},
+        detached: false
       },
       {
         headers: {
@@ -593,9 +663,78 @@ async function uploadToGoDoorWithBrowserless(eventData, showInApp = true) {
     );
     
     console.log('Browserless 回應狀態:', response.status);
-    const result = JSON.parse(response.data);
+    console.log('Browserless 原始回應:', response.data);
+    
+    let result;
+    try {
+      // 嘗試解析回應
+      if (typeof response.data === 'string') {
+        // 如果回應是字串，嘗試找到 JSON 部分
+        const jsonMatch = response.data.match(/\{.*\}/);
+        if (jsonMatch) {
+          result = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('無法在回應中找到 JSON 資料');
+        }
+      } else {
+        result = response.data;
+      }
+    } catch (parseError) {
+      console.error('解析 Browserless 回應失敗:', parseError);
+      throw new Error(`解析回應失敗: ${response.data}`);
+    }
     
     if (result.success) {
+      console.log('✅ Browserless 自動上架成功:', result.eventUrl);
+      console.log('✅ 公開設定:', result.visibility);
+      return {
+        success: true,
+        eventUrl: result.eventUrl,
+        showInApp: result.showInApp,
+        visibility: result.visibility,
+        fieldsFilledCount: result.fieldsFilledCount,
+        message: `活動已成功上架到果多後台（${result.visibility}）`
+      };
+    } else {
+      throw new Error(result.error || '未知錯誤');
+    }
+    
+  } catch (error) {
+    console.error('❌ Browserless 自動上架失敗:', error);
+    console.error('錯誤詳細:', error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.message,
+      details: error.response?.data,
+      message: '活動上架失敗'
+    };
+  }
+}.success) {
+      console.log('✅ Browserless 自動上架成功:', result.eventUrl);
+      console.log('✅ 公開設定:', result.visibility);
+      return {
+        success: true,
+        eventUrl: result.eventUrl,
+        showInApp: result.showInApp,
+        visibility: result.visibility,
+        fieldsFilledCount: result.fieldsFilledCount,
+        message: `活動已成功上架到果多後台（${result.visibility}）`
+      };
+    } else {
+      throw new Error(result.error || '未知錯誤');
+    }
+    
+  } catch (error) {
+    console.error('❌ Browserless 自動上架失敗:', error);
+    console.error('錯誤詳細:', error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.message,
+      details: error.response?.data,
+      message: '活動上架失敗'
+    };
+  }
+}.success) {
       console.log('✅ Browserless 自動上架成功:', result.eventUrl);
       console.log('✅ 公開設定:', result.visibility);
       return {
