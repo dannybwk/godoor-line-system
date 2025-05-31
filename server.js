@@ -331,24 +331,24 @@ async function uploadToGoDoorWithBrowserless(eventData, showInApp = true) {
     
     // 清理和轉義字串以避免 JSON 錯誤
     const cleanString = (str) => {
-      if (!str) return '';
-      return str.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '');
+      if (!str || typeof str !== 'string') return '';
+      return String(str).replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '');
     };
     
     const cleanEventData = {
-      name: cleanString(eventData.name),
-      description: cleanString(eventData.description),
-      startDate: cleanString(eventData.startDate),
-      startTime: cleanString(eventData.startTime),
-      endDate: cleanString(eventData.endDate || eventData.startDate),
+      name: cleanString(eventData.name || ''),
+      description: cleanString(eventData.description || ''),
+      startDate: cleanString(eventData.startDate || ''),
+      startTime: cleanString(eventData.startTime || ''),
+      endDate: cleanString(eventData.endDate || eventData.startDate || ''),
       endTime: cleanString(eventData.endTime || '18:00'),
-      location: cleanString(eventData.location),
-      address: cleanString(eventData.address),
-      organizer: cleanString(eventData.organizer),
-      maxParticipants: cleanString(eventData.maxParticipants || '50'),
-      price: cleanString(eventData.price || '0'),
-      phone: cleanString(eventData.phone),
-      email: cleanString(eventData.email)
+      location: cleanString(eventData.location || ''),
+      address: cleanString(eventData.address || ''),
+      organizer: cleanString(eventData.organizer || ''),
+      maxParticipants: cleanString(String(eventData.maxParticipants || '50')),
+      price: cleanString(String(eventData.price || '0')),
+      phone: cleanString(eventData.phone || ''),
+      email: cleanString(eventData.email || '')
     };
     
     // 建立 Puppeteer 腳本
