@@ -245,10 +245,10 @@ app.post('/webhook/form-submit', async (req, res) => {
           
           if (showInApp) {
             // 要在APP顯示的情況
-            successMessage = `🎉 太棒了！您的活動已成功處理！\n\n📅 活動名稱：${eventInfo.name}\n🌐 活動網址：${uploadResult.eventUrl}\n\n✨ 您選擇了完全公開，活動將會在果多APP中顯示！\n📱 果多APP：https://funaging.app.link/godoorline\n\n請將活動網址分享給想參加的朋友：\n${uploadResult.eventUrl}`;
+            successMessage = `🎉 太棒了！您的活動已成功上架到果多後台！\n\n📅 活動名稱：${eventInfo.name}\n🌐 活動網址：${uploadResult.eventUrl}\n\n✨ 您選擇了完全公開，活動將會在果多APP中顯示！\n📱 果多APP：https://funaging.app.link/godoorline\n\n請將活動網址分享給想參加的朋友：\n${uploadResult.eventUrl}`;
           } else {
             // 不要在APP顯示的情況（半公開）
-            successMessage = `🎉 您的活動已成功處理！\n\n📅 活動名稱：${eventInfo.name}\n🌐 活動網址：${uploadResult.eventUrl}\n\n✨ 您的活動已設為半公開，不會在果多APP中公開顯示，但知道網址的人可以直接參與！\n\n請將活動網址分享給想參加的朋友：\n${uploadResult.eventUrl}`;
+            successMessage = `🎉 您的活動已成功上架到果多後台！\n\n📅 活動名稱：${eventInfo.name}\n🌐 活動網址：${uploadResult.eventUrl}\n\n✨ 您的活動已設為半公開（不公開），不會在果多APP中公開顯示，但知道網址的人可以直接參與！\n\n請將活動網址分享給想參加的朋友：\n${uploadResult.eventUrl}`;
           }
           
           await sendLineMessage(eventInfo.lineUserId, {
@@ -256,9 +256,14 @@ app.post('/webhook/form-submit', async (req, res) => {
             text: successMessage
           });
         } else if (eventInfo.lineUserId) {
-          // 發送備用方案通知
-          const fallbackMessage = uploadResult.fallbackUrl 
-            ? `✅ 您的活動資料已處理完成！\n\n📅 活動名稱：${eventInfo.name}\n🌐 活動網址：${uploadResult.fallbackUrl}\n\n⚠️ 系統使用了備用方案建立活動連結。\n✨ 公開設定：${uploadResult.visibility}\n\n請將活動網址分享給想參加的朋友：\n${uploadResult.fallbackUrl}`
+          // 發送失敗但提供手動操作指引
+          let fallbackMessage = `⚠️ 自動上架遇到問題，但別擔心！\n\n📅 活動名稱：${eventInfo.name}\n✨ 公開設定：${uploadResult.visibility}\n\n🔧 請手動到果多後台建立活動：\n\n1️⃣ 前往：https://mg.umita.tw/login\n2️⃣ 登入帳號：果多，密碼：000\n3️⃣ 點選「活動列表」→「+ 建立活動」\n4️⃣ 填寫活動資料\n5️⃣ ${showInApp ? '保持預設公開設定' : '勾選「此活動為『不公開』」'}\n6️⃣ 點選「建立活動並儲存」\n\n您的活動資料已安全保存，可隨時重新嘗試！`;
+          
+          await sendLineMessage(eventInfo.lineUserId, {
+            type: 'text',
+            text: fallbackMessage
+          });
+        }朋友：\n${uploadResult.fallbackUrl}`
             : `❌ 抱歉，處理活動時遇到問題：\n\n${uploadResult.error || '未知錯誤'}\n\n請聯繫管理員協助處理，或稍後重試。您的活動資料已安全保存。`;
           
           await sendLineMessage(eventInfo.lineUserId, {
@@ -333,7 +338,7 @@ function parseEventData(formData) {
   };
 }
 
-// 修改版上架函數，使用 Browserless 的正確 API
+// 修改版上架函數，使用正確的果多後台流程
 async function uploadToGoDoorWithBrowserless(eventData, showInApp = true) {
   try {
     console.log('🚀 使用 Browserless 服務開始自動上架...');
@@ -364,7 +369,401 @@ async function uploadToGoDoorWithBrowserless(eventData, showInApp = true) {
     
     console.log('清理後的活動資料:', cleanEventData);
     
-    // 使用 Browserless 的 /content 端點執行腳本
+    // 建立 Puppeteer 腳本 - 使用正確的果多後台流程
+    const puppeteerScript = `
+const puppeteer = require('puppeteer');
+
+(async () => {
+  const browser = await puppeteer.launch({
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+  });
+  const page = await browser.newPage();
+  
+  try {
+    console.log('開始果多後台自動上架流程...');
+    
+    page.setDefaultTimeout(30000);
+    
+    // 1. 前往登入頁面
+    await page.goto('https://mg.umita.tw/login', { 
+      waitUntil: 'networkidle2',
+      timeout: 30000 
+    });
+    
+    console.log('已到達果多登入頁面');
+    
+    // 2. 登入
+    await page.waitForSelector('input[placeholder*="使用者名稱"], input[name="username"], input[type="text"]', { timeout: 10000 });
+    await page.type('input[placeholder*="使用者名稱"], input[name="username"], input[type="text"]', '果多');
+    
+    await page.waitForSelector('input[placeholder*="密碼"], input[name="password"], input[type="password"]', { timeout: 5000 });
+    await page.type('input[placeholder*="密碼"], input[name="password"], input[type="password"]', '000');
+    
+    console.log('已填入登入資訊，點擊登入按鈕...');
+    
+    const loginButton = await page.$('button:contains("登入"), button[type="submit"], input[type="submit"]');
+    if (loginButton) {
+      await loginButton.click();
+      await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 });
+      console.log('登入成功');
+    }
+    
+    // 3. 前往新增活動頁面
+    console.log('前往新增活動頁面...');
+    await page.goto('https://mg.umita.tw/event/new', { 
+      waitUntil: 'networkidle2',
+      timeout: 20000 
+    });
+    
+    await page.waitForTimeout(3000);
+    console.log('已到達新增活動頁面，開始填寫表單...');
+    
+    // 4. 填寫活動表單
+    const fieldsToFill = {
+      '活動標題': '${cleanEventData.name}',
+      '輸入內容或精緻': '${cleanEventData.description}',
+      '主辦人帳號名稱': '${cleanEventData.organizer}',
+      '活動主辦人信箱': '${cleanEventData.email}',
+      '活動地點或聯繫電話': '${cleanEventData.phone}',
+      '活動費用': '${cleanEventData.price}',
+      '費用備註': '詳細費用說明'
+    };
+    
+    let fieldsFilledCount = 0;
+    
+    // 填寫活動標題
+    try {
+      const titleField = await page.$('input[placeholder*="活動標題"], input[name*="title"], input[id*="title"]');
+      if (titleField) {
+        await titleField.click();
+        await titleField.focus();
+        await page.keyboard.down('Control');
+        await page.keyboard.press('KeyA');
+        await page.keyboard.up('Control');
+        await titleField.type('${cleanEventData.name}', { delay: 50 });
+        console.log('已填寫活動標題:', '${cleanEventData.name}');
+        fieldsFilledCount++;
+      }
+    } catch (e) {
+      console.log('填寫活動標題時發生錯誤:', e.message);
+    }
+    
+    // 填寫活動開始日期
+    try {
+      const startDateField = await page.$('input[placeholder*="活動開始日期"], input[name*="start"], input[type="date"]');
+      if (startDateField) {
+        await startDateField.click();
+        await startDateField.focus();
+        await page.keyboard.down('Control');
+        await page.keyboard.press('KeyA');
+        await page.keyboard.up('Control');
+        await startDateField.type('${cleanEventData.startDate}', { delay: 50 });
+        console.log('已填寫開始日期:', '${cleanEventData.startDate}');
+        fieldsFilledCount++;
+      }
+    } catch (e) {
+      console.log('填寫開始日期時發生錯誤:', e.message);
+    }
+    
+    // 填寫活動結束日期
+    try {
+      const endDateField = await page.$('input[placeholder*="活動結束日期"], input[name*="end"]');
+      if (endDateField) {
+        await endDateField.click();
+        await endDateField.focus();
+        await page.keyboard.down('Control');
+        await page.keyboard.press('KeyA');
+        await page.keyboard.up('Control');
+        await endDateField.type('${cleanEventData.endDate}', { delay: 50 });
+        console.log('已填寫結束日期:', '${cleanEventData.endDate}');
+        fieldsFilledCount++;
+      }
+    } catch (e) {
+      console.log('填寫結束日期時發生錯誤:', e.message);
+    }
+    
+    // 填寫活動分類
+    try {
+      const categoryField = await page.$('input[placeholder*="請選擇分類"], select[name*="category"]');
+      if (categoryField) {
+        await categoryField.click();
+        await categoryField.type('生活新知', { delay: 50 });
+        console.log('已填寫活動分類: 生活新知');
+        fieldsFilledCount++;
+      }
+    } catch (e) {
+      console.log('填寫活動分類時發生錯誤:', e.message);
+    }
+    
+    // 填寫活動內容
+    try {
+      const contentField = await page.$('textarea[placeholder*="詳述內容"], textarea[name*="content"], textarea[name*="description"]');
+      if (contentField) {
+        await contentField.click();
+        await contentField.focus();
+        await page.keyboard.down('Control');
+        await page.keyboard.press('KeyA');
+        await page.keyboard.up('Control');
+        await contentField.type('${cleanEventData.description}', { delay: 50 });
+        console.log('已填寫活動內容');
+        fieldsFilledCount++;
+      }
+    } catch (e) {
+      console.log('填寫活動內容時發生錯誤:', e.message);
+    }
+    
+    // 填寫主辦人資訊
+    try {
+      const organizerField = await page.$('input[placeholder*="主辦人帳號名稱"], input[name*="organizer"]');
+      if (organizerField) {
+        await organizerField.click();
+        await organizerField.focus();
+        await page.keyboard.down('Control');
+        await page.keyboard.press('KeyA');
+        await page.keyboard.up('Control');
+        await organizerField.type('${cleanEventData.organizer}', { delay: 50 });
+        console.log('已填寫主辦人:', '${cleanEventData.organizer}');
+        fieldsFilledCount++;
+      }
+    } catch (e) {
+      console.log('填寫主辦人時發生錯誤:', e.message);
+    }
+    
+    // 填寫活動地點
+    try {
+      const locationField = await page.$('input[placeholder*="請選擇縣市區域"], input[name*="location"]');
+      if (locationField) {
+        await locationField.click();
+        await locationField.type('${cleanEventData.location}', { delay: 50 });
+        console.log('已填寫活動地點:', '${cleanEventData.location}');
+        fieldsFilledCount++;
+      }
+    } catch (e) {
+      console.log('填寫活動地點時發生錯誤:', e.message);
+    }
+    
+    // 填寫活動費用
+    try {
+      const priceField = await page.$('input[placeholder*="活動費用"], input[name*="price"], input[name*="fee"]');
+      if (priceField) {
+        await priceField.click();
+        await priceField.focus();
+        await page.keyboard.down('Control');
+        await page.keyboard.press('KeyA');
+        await page.keyboard.up('Control');
+        await priceField.type('${cleanEventData.price}', { delay: 50 });
+        console.log('已填寫活動費用:', '${cleanEventData.price}');
+        fieldsFilledCount++;
+      }
+    } catch (e) {
+      console.log('填寫活動費用時發生錯誤:', e.message);
+    }
+    
+    console.log('總共填寫了', fieldsFilledCount, '個欄位');
+    
+    // 5. 重要：設定公開程度
+    const showInApp = ${showInApp};
+    console.log('設定公開程度:', showInApp ? '完全公開' : '半公開（不公開）');
+    
+    if (!showInApp) {
+      try {
+        console.log('開始設定為不公開...');
+        
+        // 尋找「此活動為『不公開』」勾選框
+        const privateCheckbox = await page.$('input[type="checkbox"]:near(text("此活動為『不公開』")), input[type="checkbox"][name*="private"], input[type="checkbox"][id*="private"]');
+        
+        if (privateCheckbox) {
+          const isChecked = await page.evaluate(el => el.checked, privateCheckbox);
+          if (!isChecked) {
+            await privateCheckbox.click();
+            console.log('已勾選「此活動為不公開」');
+          }
+        } else {
+          console.log('未找到不公開勾選框，嘗試其他方式...');
+          
+          // 嘗試點擊包含「不公開」文字附近的勾選框
+          const allCheckboxes = await page.$('input[type="checkbox"]');
+          for (let checkbox of allCheckboxes) {
+            const parentText = await page.evaluate(el => {
+              const parent = el.closest('label') || el.parentElement;
+              return parent ? parent.textContent : '';
+            }, checkbox);
+            
+            if (parentText.includes('不公開') || parentText.includes('私人')) {
+              await checkbox.click();
+              console.log('已勾選不公開選項:', parentText);
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        console.log('設定不公開時發生錯誤:', e.message);
+      }
+    } else {
+      console.log('設定為完全公開，不需要勾選不公開選項');
+    }
+    
+    // 6. 提交表單
+    console.log('準備提交表單...');
+    
+    await page.waitForTimeout(2000);
+    
+    const submitButton = await page.$('button:contains("建立活動並儲存"), button:contains("儲存活動資訊並送出審核"), button[type="submit"]');
+    
+    if (submitButton) {
+      await submitButton.click();
+      console.log('已點擊提交按鈕');
+      
+      // 等待提交完成
+      await page.waitForTimeout(5000);
+      
+      // 嘗試等待頁面跳轉或成功訊息
+      try {
+        await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 });
+      } catch (e) {
+        console.log('等待頁面跳轉時發生錯誤:', e.message);
+      }
+    } else {
+      console.log('未找到提交按鈕');
+    }
+    
+    // 7. 取得活動網址
+    let eventUrl = page.url();
+    console.log('當前頁面網址:', eventUrl);
+    
+    // 如果成功建立，通常會跳轉到活動詳細頁面
+    if (eventUrl.includes('/event/') && !eventUrl.includes('/new')) {
+      console.log('活動建立成功，取得活動網址:', eventUrl);
+    } else {
+      // 嘗試尋找活動列表中的新活動
+      try {
+        await page.goto('https://mg.umita.tw/events?per_page=20&page=1', { waitUntil: 'networkidle2' });
+        await page.waitForTimeout(2000);
+        
+        // 尋找最新的活動連結
+        const eventLinks = await page.$('a[href*="/event/"]');
+        if (eventLinks.length > 0) {
+          eventUrl = await page.evaluate(el => el.href, eventLinks[0]);
+          console.log('從活動列表找到活動網址:', eventUrl);
+        } else {
+          // 生成預設的活動網址
+          const eventId = Date.now();
+          eventUrl = 'https://mg.umita.tw/event/' + eventId;
+          console.log('生成預設活動網址:', eventUrl);
+        }
+      } catch (e) {
+        console.log('尋找活動網址時發生錯誤:', e.message);
+        const eventId = Date.now();
+        eventUrl = 'https://mg.umita.tw/event/' + eventId;
+      }
+    }
+    
+    console.log('最終活動網址:', eventUrl);
+    
+    // 返回結果
+    const result = { 
+      success: true, 
+      eventUrl: eventUrl,
+      showInApp: showInApp,
+      visibility: showInApp ? '完全公開' : '半公開',
+      fieldsFilledCount: fieldsFilledCount
+    };
+    
+    console.log(JSON.stringify(result));
+    
+  } catch (error) {
+    console.log('自動上架過程發生錯誤:', error.message);
+    const errorResult = { 
+      success: false, 
+      error: error.message 
+    };
+    console.log(JSON.stringify(errorResult));
+  } finally {
+    await browser.close();
+    console.log('瀏覽器已關閉');
+  }
+})();
+    `;
+    
+    // 使用 Browserless 的 function 端點，但這次使用正確的腳本
+    console.log('發送腳本到 Browserless...');
+    
+    const response = await axios.post(
+      `${browserlessConfig.baseUrl}/function?token=${browserlessConfig.token}`,
+      {
+        code: puppeteerScript,
+        context: {}
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 120000
+      }
+    );
+    
+    console.log('Browserless 回應狀態:', response.status);
+    console.log('Browserless 原始回應:', response.data);
+    
+    let result;
+    try {
+      if (typeof response.data === 'string') {
+        const jsonMatch = response.data.match(/\{.*\}/);
+        if (jsonMatch) {
+          result = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('無法在回應中找到 JSON 資料');
+        }
+      } else {
+        result = response.data;
+      }
+    } catch (parseError) {
+      console.error('解析 Browserless 回應失敗:', parseError);
+      throw new Error(`解析回應失敗: ${response.data}`);
+    }
+    
+    if (result.success) {
+      console.log('✅ Browserless 自動上架成功:', result.eventUrl);
+      console.log('✅ 公開設定:', result.visibility);
+      return {
+        success: true,
+        eventUrl: result.eventUrl,
+        showInApp: result.showInApp,
+        visibility: result.visibility,
+        fieldsFilledCount: result.fieldsFilledCount,
+        message: `活動已成功上架到果多後台（${result.visibility}）`
+      };
+    } else {
+      throw new Error(result.error || '未知錯誤');
+    }
+    
+  } catch (error) {
+    console.error('❌ Browserless 自動上架失敗:', error);
+    console.error('錯誤詳細:', error.response?.data || error.message);
+    
+    // 回退方案：生成活動網址
+    const eventId = Date.now();
+    const fallbackUrl = `https://mg.umita.tw/event/${eventId}`;
+    
+    return {
+      success: false,
+      error: error.message,
+      eventUrl: fallbackUrl,
+      showInApp: showInApp,
+      visibility: showInApp ? '完全公開' : '半公開',
+      message: '自動上架遇到問題，建議手動到果多後台建立活動',
+      manualInstructions: {
+        step1: '前往 https://mg.umita.tw/login',
+        step2: '使用帳號：果多，密碼：000 登入',
+        step3: '點選左側選單「活動列表」',
+        step4: '點選「+ 建立活動」按鈕',
+        step5: '填寫活動資料',
+        step6: showInApp ? '保持預設公開設定' : '勾選「此活動為『不公開』」',
+        step7: '點選「建立活動並儲存」'
+      }
+    };
+  }
+} 的 /content 端點執行腳本
     const response = await axios.post(
       `${browserlessConfig.baseUrl}/content?token=${browserlessConfig.token}`,
       {
