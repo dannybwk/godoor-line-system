@@ -195,7 +195,7 @@ app.get('/create-event', (req, res) => {
   `);
 });
 
-// 處理表單提交通知（最終版 - 包含半公開設定）
+// 處理表單提交通知（改善用戶體驗版 - 立即回應）
 app.post('/webhook/form-submit', async (req, res) => {
   try {
     const formData = req.body;
@@ -216,10 +216,79 @@ app.post('/webhook/form-submit', async (req, res) => {
     
     console.log('使用者選擇:', showInApp ? '要在APP中顯示' : '不要在APP中顯示（設為半公開）');
     
-    // 發送初始確認訊息
+    // 🚀 立即發送確認訊息（改善用戶體驗）
     if (eventInfo.lineUserId && eventInfo.lineUserId.trim() !== '' && eventInfo.lineUserId !== 'connection_test_123') {
-      console.log('準備發送初始確認訊息給:', eventInfo.lineUserId);
+      console.log('立即發送確認訊息給:', eventInfo.lineUserId);
       
+      const immediateMessage = `✅ 您的活動資料已成功收到！\n\n📅 活動名稱：${eventInfo.name}\n📍 活動地點：${eventInfo.location}\n📊 主辦單位：${eventInfo.organizer}\n⏰ 開始日期：${eventInfo.startDate}\n✨ 公開設定：${showInApp ? '完全公開（將在APP顯示）' : '半公開（不在APP顯示）'}\n\n🔄 系統正在背景處理，如有進一步更新會再通知您！`;
+      
+      await sendLineMessage(eventInfo.lineUserId, {
+        type: 'text',
+        text: immediateMessage
+      });
+    }
+
+    // 🎯 先回應 HTTP 請求（避免表單超時）
+    res.json({ 
+      success: true, 
+      message: '表單處理完成',
+      eventName: eventInfo.name,
+      hasLineUserId: !!eventInfo.lineUserId,
+      willShowInApp: showInApp,
+      visibility: showInApp ? '完全公開' : '半公開',
+      willUpload: true,
+      immediateResponse: true
+    });
+
+    // 🚀 異步處理自動上架（在背景執行）
+    console.log('🚀 開始背景自動上架處理...');
+    console.log('公開設定:', showInApp ? '完全公開' : '半公開');
+    
+    setImmediate(async () => {
+      try {
+        const uploadResult = await uploadToGoDoorWithBrowserless(eventInfo, showInApp);
+        
+        if (uploadResult.success && eventInfo.lineUserId) {
+          // 根據選擇發送不同的成功通知
+          let successMessage;
+          
+          if (showInApp) {
+            // 要在APP顯示的情況
+            successMessage = `🎉 太棒了！您的活動已成功上架到果多後台！\n\n📅 活動名稱：${eventInfo.name}\n🌐 活動網址：${uploadResult.eventUrl}\n\n✨ 您選擇了完全公開，活動將會在果多APP中顯示！\n📱 果多APP：https://funaging.app.link/godoorline\n\n請將活動網址分享給想參加的朋友：\n${uploadResult.eventUrl}`;
+          } else {
+            // 不要在APP顯示的情況（半公開）
+            successMessage = `🎉 您的活動已成功上架到果多後台！\n\n📅 活動名稱：${eventInfo.name}\n🌐 活動網址：${uploadResult.eventUrl}\n\n✨ 您的活動已設為半公開（不公開），不會在果多APP中公開顯示，但知道網址的人可以直接參與！\n\n請將活動網址分享給想參加的朋友：\n${uploadResult.eventUrl}`;
+          }
+          
+          await sendLineMessage(eventInfo.lineUserId, {
+            type: 'text',
+            text: successMessage
+          });
+        } else if (eventInfo.lineUserId) {
+          // 發送失敗但提供手動操作指引
+          let fallbackMessage = `⚠️ 自動上架遇到問題，但別擔心！\n\n📅 活動名稱：${eventInfo.name}\n✨ 公開設定：${uploadResult.visibility}\n\n🔧 請手動到果多後台建立活動：\n\n1️⃣ 前往：https://mg.umita.tw/login\n2️⃣ 登入帳號：果多，密碼：000\n3️⃣ 點選「活動列表」→「+ 建立活動」\n4️⃣ 填寫活動資料\n5️⃣ ${showInApp ? '保持預設公開設定' : '勾選「此活動為『不公開』」'}\n6️⃣ 點選「建立活動並儲存」\n\n您的活動資料已安全保存，可隨時重新嘗試！`;
+          
+          await sendLineMessage(eventInfo.lineUserId, {
+            type: 'text',
+            text: fallbackMessage
+          });
+        }
+      } catch (error) {
+        console.error('背景自動上架處理錯誤:', error);
+        if (eventInfo.lineUserId) {
+          await sendLineMessage(eventInfo.lineUserId, {
+            type: 'text',
+            text: `❌ 背景處理時發生系統錯誤，請聯繫管理員。您的活動資料已安全保存。`
+          });
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('處理表單提交錯誤:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
       const initialMessage = showInApp 
         ? `✅ 您的活動資料已收到！\n\n📅 活動名稱：${eventInfo.name}\n📍 活動地點：${eventInfo.location}\n📊 主辦單位：${eventInfo.organizer}\n⏰ 開始日期：${eventInfo.startDate}\n\n🚀 系統正在自動上架到果多後台，您的活動將會在果多APP中顯示，預計需要 2-3 分鐘，完成後會立即提供報名網址！`
         : `✅ 您的活動資料已收到！\n\n📅 活動名稱：${eventInfo.name}\n📍 活動地點：${eventInfo.location}\n📊 主辦單位：${eventInfo.organizer}\n⏰ 開始日期：${eventInfo.startDate}\n\n🚀 系統正在自動上架到果多後台（設為半公開），不會在APP中顯示，但仍會提供報名網址，預計需要 2-3 分鐘！`;
@@ -608,7 +677,7 @@ const puppeteer = require('puppeteer');
     
     await page.waitForTimeout(2000);
     
-    const submitButton = await page.$('button:contains("建立活動並儲存"), button:contains("儲存活動資訊並送出審核"), button[type="submit"]');
+    const submitButton = await page.$('button[type="submit"]');
     
     if (submitButton) {
       await submitButton.click();
