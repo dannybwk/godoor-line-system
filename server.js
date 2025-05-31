@@ -167,7 +167,7 @@ async function handleEvent(event) {
           actions: [{
             type: 'uri',
             label: '開始建立活動',
-            uri: `https://${process.env.RAILWAY_STATIC_URL || 'your-app.railway.app'}/create-event`
+            uri: `https://${process.env.RENDER_EXTERNAL_URL || 'godoor-line-system.onrender.com'}/create-event`
           }]
         }
       };
