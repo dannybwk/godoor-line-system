@@ -1,7 +1,7 @@
 {
   "name": "godoor-line-system",
   "version": "1.0.0",
-  "description": "GoDoor LINE Event System with Auto Upload",
+  "description": "GoDoor LINE Event System with Browserless Auto Upload",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
