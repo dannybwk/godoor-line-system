@@ -12,6 +12,12 @@ const config = {
   channelSecret: process.env.LINE_CHANNEL_SECRET
 };
 
+// Browserless 設定（免費額度每月 1000 次）
+const browserlessConfig = {
+  token: process.env.BROWSERLESS_TOKEN || 'demo', // 需要註冊取得免費 token
+  baseUrl: 'https://chrome.browserless.io'
+};
+
 // 果多後台設定
 const goDoorConfig = {
   baseUrl: 'https://mg.umita.tw',
@@ -23,7 +29,7 @@ const goDoorConfig = {
 app.get('/', (req, res) => {
   res.json({ 
     status: 'OK', 
-    message: 'GoDoor LINE System with Lightweight Auto Upload is running!',
+    message: 'GoDoor LINE System with Browserless Auto Upload is running!',
     timestamp: new Date().toISOString(),
     config: {
       hasAccessToken: !!config.channelAccessToken,
@@ -33,8 +39,8 @@ app.get('/', (req, res) => {
     },
     features: {
       autoUpload: true,
-      method: 'HTTP Request (Lightweight)',
-      puppeteer: false
+      method: 'Browserless Cloud Service',
+      browserless: !!browserlessConfig.token
     }
   });
 });
@@ -119,8 +125,8 @@ app.get('/create-event', (req, res) => {
             <p>歡迎使用 GoDoor 活動建立系統！<br>點擊下方按鈕開始建立您的活動。</p>
             
             <div class="features">
-                🚀 輕量版自動上架功能<br>
-                ⚡ 快速、穩定、免費
+                🚀 雲端自動上架功能<br>
+                ⚡ 真正自動化，完全免費
             </div>
             
             ${userId ? `
@@ -187,7 +193,7 @@ app.get('/create-event', (req, res) => {
   `);
 });
 
-// 處理表單提交通知（輕量版）
+// 處理表單提交通知（真正自動上架版）
 app.post('/webhook/form-submit', async (req, res) => {
   try {
     const formData = req.body;
@@ -204,7 +210,7 @@ app.post('/webhook/form-submit', async (req, res) => {
       
       await sendLineMessage(eventInfo.lineUserId, {
         type: 'text',
-        text: `✅ 您的活動資料已收到！\n\n📅 活動名稱：${eventInfo.name}\n📍 活動地點：${eventInfo.location}\n📊 主辦單位：${eventInfo.organizer}\n⏰ 開始日期：${eventInfo.startDate}\n\n🚀 系統正在自動處理，預計需要 1-2 分鐘，完成後會立即通知您！`
+        text: `✅ 您的活動資料已收到！\n\n📅 活動名稱：${eventInfo.name}\n📍 活動地點：${eventInfo.location}\n📊 主辦單位：${eventInfo.organizer}\n⏰ 開始日期：${eventInfo.startDate}\n\n🚀 系統正在自動上架到果多後台，預計需要 2-3 分鐘，完成後會立即提供報名網址！`
       });
     }
 
@@ -212,24 +218,24 @@ app.post('/webhook/form-submit', async (req, res) => {
     const shouldUpload = formData['要將活動公開曝光到果多APP上嗎？'] === '要（果多APP和果多LINE上的推薦活動上可以看到此活動）';
     
     if (shouldUpload) {
-      console.log('🚀 開始自動上架到果多後台...');
+      console.log('🚀 開始真正自動上架到果多後台...');
       
       // 異步處理自動上架
       setImmediate(async () => {
         try {
-          const uploadResult = await uploadToGoDoorAPI(eventInfo);
+          const uploadResult = await uploadToGoDoorWithBrowserless(eventInfo);
           
           if (uploadResult.success && eventInfo.lineUserId) {
             // 發送成功通知
             await sendLineMessage(eventInfo.lineUserId, {
               type: 'text',
-              text: `🎉 太棒了！您的活動處理完成！\n\n📅 活動名稱：${eventInfo.name}\n🌐 預估報名網址：${uploadResult.eventUrl}\n\n✨ 您的活動已進入處理流程，請耐心等候最終確認。\n\n如有任何問題，請聯繫客服！`
+              text: `🎉 太棒了！您的活動已成功上架到果多！\n\n📅 活動名稱：${eventInfo.name}\n🌐 報名網址：${uploadResult.eventUrl}\n\n現在大家都可以在果多APP上看到您的活動並報名了！\n\n請將報名網址分享給想參加的朋友：\n${uploadResult.eventUrl}`
             });
           } else if (eventInfo.lineUserId) {
-            // 發送備用通知
+            // 發送失敗通知
             await sendLineMessage(eventInfo.lineUserId, {
               type: 'text',
-              text: `✅ 您的活動資料已完整收到！\n\n📅 活動名稱：${eventInfo.name}\n📍 地點：${eventInfo.location}\n⏰ 時間：${eventInfo.startDate}\n\n📝 活動已進入審核流程，我們會盡快為您處理並提供報名網址。\n\n感謝您的耐心等候！`
+              text: `❌ 抱歉，自動上架到果多時遇到問題：\n\n${uploadResult.error || '未知錯誤'}\n\n請聯繫管理員協助處理，或稍後重試。您的活動資料已安全保存。`
             });
           }
         } catch (error) {
@@ -237,7 +243,7 @@ app.post('/webhook/form-submit', async (req, res) => {
           if (eventInfo.lineUserId) {
             await sendLineMessage(eventInfo.lineUserId, {
               type: 'text',
-              text: `✅ 您的活動資料已安全收到！\n\n📅 活動名稱：${eventInfo.name}\n\n由於系統繁忙，我們會以人工方式為您處理活動上架，並在完成後通知您報名網址。\n\n預計處理時間：1-2個工作天\n感謝您的理解！`
+              text: `❌ 自動上架時發生系統錯誤，請聯繫管理員。您的活動資料已安全保存。`
             });
           }
         }
@@ -294,48 +300,125 @@ function parseEventData(formData) {
   };
 }
 
-// 輕量版自動上架（使用 HTTP 請求模擬）
-async function uploadToGoDoorAPI(eventData) {
+// 使用 Browserless 服務自動上架到果多
+async function uploadToGoDoorWithBrowserless(eventData) {
   try {
-    console.log('🚀 開始輕量版自動上架...');
+    console.log('🚀 使用 Browserless 服務開始自動上架...');
     
-    // 模擬 API 調用（實際上這裡會呼叫果多的後台 API）
-    // 由於我們沒有官方 API，這裡先模擬處理流程
+    // 建立 Puppeteer 腳本
+    const puppeteerScript = `
+      const puppeteer = require('puppeteer');
+      
+      (async () => {
+        const browser = await puppeteer.launch();
+        const page = await browser.newPage();
+        
+        try {
+          // 前往果多後台
+          await page.goto('${goDoorConfig.baseUrl}', { waitUntil: 'networkidle2' });
+          
+          // 檢查是否需要登入
+          const needLogin = await page.$('input[type="password"]') !== null;
+          
+          if (needLogin) {
+            // 填入登入資訊
+            await page.type('input[type="text"], input[name*="user"]', '${goDoorConfig.username}');
+            await page.type('input[type="password"]', '${goDoorConfig.password}');
+            
+            // 點擊登入
+            await page.click('button[type="submit"], input[type="submit"]');
+            await page.waitForNavigation();
+          }
+          
+          // 尋找新增活動功能
+          const createButtons = await page.$$('a, button');
+          for (let button of createButtons) {
+            const text = await page.evaluate(el => el.textContent.toLowerCase(), button);
+            if (text.includes('活動') && text.includes('新增')) {
+              await button.click();
+              break;
+            }
+          }
+          
+          await page.waitForTimeout(2000);
+          
+          // 填寫活動表單
+          const fields = {
+            '活動名稱': '${eventData.name}',
+            '活動描述': '${eventData.description}',
+            '開始日期': '${eventData.startDate}',
+            '開始時間': '${eventData.startTime}',
+            '活動地點': '${eventData.location}',
+            '主辦單位': '${eventData.organizer}',
+            '人數上限': '${eventData.maxParticipants}',
+            '活動費用': '${eventData.price}'
+          };
+          
+          for (const [fieldName, value] of Object.entries(fields)) {
+            const input = await page.$(\`input[name*="\${fieldName}"], textarea[name*="\${fieldName}"], input[placeholder*="\${fieldName}"]\`);
+            if (input) {
+              await input.click();
+              await input.clear();
+              await input.type(value);
+            }
+          }
+          
+          // 提交表單
+          const submitButton = await page.$('button[type="submit"], input[type="submit"]');
+          if (submitButton) {
+            await submitButton.click();
+            await page.waitForTimeout(3000);
+          }
+          
+          // 取得活動網址
+          let eventUrl = page.url();
+          if (!eventUrl.includes('/event/')) {
+            const eventLinks = await page.$$('a[href*="/event/"]');
+            if (eventLinks.length > 0) {
+              eventUrl = await page.evaluate(el => el.href, eventLinks[eventLinks.length - 1]);
+            }
+          }
+          
+          console.log(JSON.stringify({ success: true, eventUrl: eventUrl }));
+          
+        } catch (error) {
+          console.log(JSON.stringify({ success: false, error: error.message }));
+        } finally {
+          await browser.close();
+        }
+      })();
+    `;
     
-    await new Promise(resolve => setTimeout(resolve, 2000)); // 模擬處理時間
-    
-    // 產生活動 ID（基於時間戳）
-    const eventId = Date.now() + Math.floor(Math.random() * 1000);
-    const eventUrl = `${goDoorConfig.baseUrl}/event/register/${eventId}`;
-    
-    console.log('✅ 模擬上架完成，活動網址:', eventUrl);
-    
-    // 實際實施時，這裡會是真正的 API 調用
-    /*
-    const response = await axios.post(`${goDoorConfig.baseUrl}/api/events`, {
-      name: eventData.name,
-      description: eventData.description,
-      startDate: eventData.startDate,
-      startTime: eventData.startTime,
-      location: eventData.location,
-      organizer: eventData.organizer,
-      // ... 其他欄位
-    }, {
-      headers: {
-        'Authorization': 'Bearer ' + authToken,
-        'Content-Type': 'application/json'
+    // 發送到 Browserless
+    const response = await axios.post(
+      `${browserlessConfig.baseUrl}/function?token=${browserlessConfig.token}`,
+      {
+        code: puppeteerScript,
+        context: {}
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 60000 // 60 秒超時
       }
-    });
-    */
+    );
     
-    return {
-      success: true,
-      eventUrl: eventUrl,
-      message: '活動已成功提交到果多後台'
-    };
+    const result = JSON.parse(response.data);
+    
+    if (result.success) {
+      console.log('✅ Browserless 自動上架成功:', result.eventUrl);
+      return {
+        success: true,
+        eventUrl: result.eventUrl,
+        message: '活動已成功上架到果多後台'
+      };
+    } else {
+      throw new Error(result.error);
+    }
     
   } catch (error) {
-    console.error('❌ 輕量版上架失敗:', error);
+    console.error('❌ Browserless 自動上架失敗:', error);
     return {
       success: false,
       error: error.message,
@@ -348,8 +431,8 @@ async function uploadToGoDoorAPI(eventData) {
 app.post('/test-upload', async (req, res) => {
   try {
     const testEventData = {
-      name: 'API測試活動',
-      description: '這是一個API測試活動',
+      name: 'Browserless 測試活動',
+      description: '這是一個使用 Browserless 服務的測試活動',
       startDate: '2025-06-15',
       startTime: '10:00',
       location: '台北市',
@@ -358,7 +441,7 @@ app.post('/test-upload', async (req, res) => {
       price: '0'
     };
 
-    const result = await uploadToGoDoorAPI(testEventData);
+    const result = await uploadToGoDoorWithBrowserless(testEventData);
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -458,12 +541,12 @@ async function handleEvent(event) {
       } else if (text.includes('測試') || text === 'test') {
         await sendReplyMessage(replyToken, {
           type: 'text',
-          text: `✅ 系統正常運作！\n\n👤 您的 User ID:\n${userId}\n\n🎯 請輸入「建立活動」來開始建立新活動\n\n🚀 輕量版自動上架功能已啟用！`
+          text: `✅ 系統正常運作！\n\n👤 您的 User ID:\n${userId}\n\n🎯 請輸入「建立活動」來開始建立新活動\n\n🚀 雲端自動上架功能已啟用！`
         });
       } else {
         await sendReplyMessage(replyToken, {
           type: 'text',
-          text: `👋 您好！歡迎使用 GoDoor 活動小幫手！\n\n🎯 請輸入「建立活動」來開始建立新活動\n🔧 輸入「測試」來檢查系統狀態\n⚡ 輕量版自動處理功能\n\n您的訊息：${text}`
+          text: `👋 您好！歡迎使用 GoDoor 活動小幫手！\n\n🎯 請輸入「建立活動」來開始建立新活動\n🔧 輸入「測試」來檢查系統狀態\n🚀 雲端自動上架功能\n\n您的訊息：${text}`
         });
       }
     }
@@ -520,5 +603,5 @@ app.listen(PORT, () => {
   console.log(`🎯 Create event page: /create-event`);
   console.log(`🧪 Test endpoint: /test`);
   console.log(`🤖 Test upload: POST /test-upload`);
-  console.log(`⚡ Lightweight Auto Upload: ENABLED`);
+  console.log(`🌐 Browserless Auto Upload: ENABLED`);
 });
