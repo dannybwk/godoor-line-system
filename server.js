@@ -392,16 +392,16 @@ const puppeteer = require('puppeteer');
     
     console.log('已到達果多登入頁面');
     
-    // 2. 登入
-    await page.waitForSelector('input[placeholder*="使用者名稱"], input[name="username"], input[type="text"]', { timeout: 10000 });
-    await page.type('input[placeholder*="使用者名稱"], input[name="username"], input[type="text"]', '果多');
+    // 登入
+    await page.waitForSelector('input[type="text"], input[name="username"]', { timeout: 10000 });
+    await page.type('input[type="text"], input[name="username"]', '果多');
     
-    await page.waitForSelector('input[placeholder*="密碼"], input[name="password"], input[type="password"]', { timeout: 5000 });
-    await page.type('input[placeholder*="密碼"], input[name="password"], input[type="password"]', '000');
+    await page.waitForSelector('input[type="password"], input[name="password"]', { timeout: 5000 });
+    await page.type('input[type="password"], input[name="password"]', '000');
     
     console.log('已填入登入資訊，點擊登入按鈕...');
     
-    const loginButton = await page.$('button:contains("登入"), button[type="submit"], input[type="submit"]');
+    const loginButton = await page.$('button[type="submit"], input[type="submit"]');
     if (loginButton) {
       await loginButton.click();
       await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 });
@@ -433,7 +433,7 @@ const puppeteer = require('puppeteer');
     
     // 填寫活動標題
     try {
-      const titleField = await page.$('input[placeholder*="活動標題"], input[name*="title"], input[id*="title"]');
+      const titleField = await page.$('input[name*="title"], input[id*="title"]');
       if (titleField) {
         await titleField.click();
         await titleField.focus();
@@ -450,7 +450,7 @@ const puppeteer = require('puppeteer');
     
     // 填寫活動開始日期
     try {
-      const startDateField = await page.$('input[placeholder*="活動開始日期"], input[name*="start"], input[type="date"]');
+      const startDateField = await page.$('input[name*="start"], input[type="date"]');
       if (startDateField) {
         await startDateField.click();
         await startDateField.focus();
@@ -467,7 +467,7 @@ const puppeteer = require('puppeteer');
     
     // 填寫活動結束日期
     try {
-      const endDateField = await page.$('input[placeholder*="活動結束日期"], input[name*="end"]');
+      const endDateField = await page.$('input[name*="end"]');
       if (endDateField) {
         await endDateField.click();
         await endDateField.focus();
@@ -484,7 +484,7 @@ const puppeteer = require('puppeteer');
     
     // 填寫活動分類
     try {
-      const categoryField = await page.$('input[placeholder*="請選擇分類"], select[name*="category"]');
+      const categoryField = await page.$('select[name*="category"]');
       if (categoryField) {
         await categoryField.click();
         await categoryField.type('生活新知', { delay: 50 });
@@ -497,7 +497,7 @@ const puppeteer = require('puppeteer');
     
     // 填寫活動內容
     try {
-      const contentField = await page.$('textarea[placeholder*="詳述內容"], textarea[name*="content"], textarea[name*="description"]');
+      const contentField = await page.$('textarea[name*="content"], textarea[name*="description"]');
       if (contentField) {
         await contentField.click();
         await contentField.focus();
@@ -514,7 +514,7 @@ const puppeteer = require('puppeteer');
     
     // 填寫主辦人資訊
     try {
-      const organizerField = await page.$('input[placeholder*="主辦人帳號名稱"], input[name*="organizer"]');
+      const organizerField = await page.$('input[name*="organizer"]');
       if (organizerField) {
         await organizerField.click();
         await organizerField.focus();
@@ -531,7 +531,7 @@ const puppeteer = require('puppeteer');
     
     // 填寫活動地點
     try {
-      const locationField = await page.$('input[placeholder*="請選擇縣市區域"], input[name*="location"]');
+      const locationField = await page.$('input[name*="location"]');
       if (locationField) {
         await locationField.click();
         await locationField.type('${cleanEventData.location}', { delay: 50 });
@@ -544,7 +544,7 @@ const puppeteer = require('puppeteer');
     
     // 填寫活動費用
     try {
-      const priceField = await page.$('input[placeholder*="活動費用"], input[name*="price"], input[name*="fee"]');
+      const priceField = await page.$('input[name*="price"], input[name*="fee"]');
       if (priceField) {
         await priceField.click();
         await priceField.focus();
