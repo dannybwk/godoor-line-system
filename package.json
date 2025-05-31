@@ -1,7 +1,7 @@
 {
   "name": "godoor-line-system",
   "version": "1.0.0",
-  "description": "GoDoor LINE Event System",
+  "description": "GoDoor LINE Event System with Auto Upload",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -12,7 +12,8 @@
     "@line/bot-sdk": "^7.5.2",
     "axios": "^1.6.0",
     "googleapis": "^128.0.0",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "puppeteer": "^21.5.0"
   },
   "engines": {
     "node": "18.x"
