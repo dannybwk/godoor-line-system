@@ -162,38 +162,58 @@ app.get('/create-event', (req, res) => {
   `);
 });
 
-// 處理表單提交通知
+// 處理表單提交通知（修復版）
 app.post('/webhook/form-submit', async (req, res) => {
   try {
     const formData = req.body;
     console.log('=== 收到表單提交資料 ===');
     console.log('資料:', JSON.stringify(formData, null, 2));
     
-    const eventName = formData['活動名稱'] || '未命名活動';
-    const eventDate = formData['開始日期'] || '待定';
-    const eventLocation = formData['活動地點'] || '待定';
-    const organizer = formData['主辦單位'] || '未知';
-    const lineUserId = formData['LINE使用者ID'];
+    // 修復欄位名稱匹配問題
+    const eventName = formData['活動名稱'] || formData['活動標題'] || '未命名活動';
+    const eventDate = formData['開始日期'] || formData['活動開始日期'] || '待定';
+    const eventLocation = formData['活動地點'] || formData['活動縣市'] || '待定';
+    const organizer = formData['主辦單位'] || formData['活動主辦人或單位'] || '未知';
     
+    // 修復 LINE 使用者 ID 欄位名稱
+    const lineUserId = formData['LINE使用者ID'] || 
+                      formData['LINE使用者ID（系統自動填寫，請保留我們才能通知您哦）'] || 
+                      formData['LINE使用者ID（系統自動填寫，請保留我們才能通知您哦)'] ||
+                      '';
+    
+    console.log('解析結果:');
     console.log('活動名稱:', eventName);
+    console.log('活動日期:', eventDate);
+    console.log('活動地點:', eventLocation);
+    console.log('主辦單位:', organizer);
     console.log('LINE使用者ID:', lineUserId);
+    console.log('LINE使用者ID長度:', lineUserId ? lineUserId.length : 0);
     
-    if (lineUserId && lineUserId.trim() !== '') {
-      await sendLineMessage(lineUserId, {
+    // 檢查並發送確認訊息
+    if (lineUserId && lineUserId.trim() !== '' && lineUserId !== 'connection_test_123') {
+      console.log('準備發送 LINE 訊息給:', lineUserId);
+      
+      const success = await sendLineMessage(lineUserId, {
         type: 'text',
         text: `✅ 您的活動資料已收到！\n\n📅 活動名稱：${eventName}\n📍 活動地點：${eventLocation}\n📊 主辦單位：${organizer}\n⏰ 開始日期：${eventDate}\n\n系統正在處理中，稍後會提供活動報名網址給您。感謝您的耐心等候！`
       });
       
-      console.log('✅ 確認訊息已發送給使用者');
+      if (success) {
+        console.log('✅ 確認訊息發送成功');
+      } else {
+        console.log('❌ 確認訊息發送失敗');
+      }
     } else {
-      console.log('⚠️ 沒有 LINE 使用者 ID，無法發送確認訊息');
+      console.log('⚠️ 沒有有效的 LINE 使用者 ID，無法發送確認訊息');
+      console.log('原始 LINE ID 值:', JSON.stringify(lineUserId));
     }
     
     res.json({ 
       success: true, 
       message: '表單處理完成',
       eventName: eventName,
-      hasLineUserId: !!lineUserId
+      hasLineUserId: !!(lineUserId && lineUserId.trim() !== ''),
+      lineUserIdFound: lineUserId || 'not found'
     });
     
   } catch (error) {
@@ -202,19 +222,42 @@ app.post('/webhook/form-submit', async (req, res) => {
   }
 });
 
-// 發送 LINE 訊息
+// 修復版發送 LINE 訊息函數
 async function sendLineMessage(userId, message) {
   try {
+    console.log('發送 LINE 訊息函數被調用');
+    console.log('目標使用者 ID:', userId);
+    console.log('使用者 ID 類型:', typeof userId);
+    console.log('使用者 ID 長度:', userId ? userId.length : 0);
+    
     if (!config.channelAccessToken) {
       throw new Error('LINE Channel Access Token 未設定');
     }
     
+    // 驗證使用者 ID 格式
+    if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+      throw new Error('無效的使用者 ID: ' + JSON.stringify(userId));
+    }
+    
+    // 清理使用者 ID（移除可能的空白字符）
+    const cleanUserId = userId.trim();
+    
+    // 檢查 LINE User ID 格式（通常以 U 開頭，33個字符）
+    if (!cleanUserId.startsWith('U') || cleanUserId.length !== 33) {
+      console.log('⚠️ 使用者 ID 格式可能不正確:', cleanUserId);
+      console.log('長度:', cleanUserId.length, '預期: 33');
+    }
+    
+    const requestBody = {
+      to: cleanUserId,
+      messages: [message]
+    };
+    
+    console.log('準備發送的請求:', JSON.stringify(requestBody, null, 2));
+    
     const response = await axios.post(
       'https://api.line.me/v2/bot/message/push',
-      {
-        to: userId,
-        messages: [message]
-      },
+      requestBody,
       {
         headers: {
           'Authorization': `Bearer ${config.channelAccessToken}`,
@@ -223,11 +266,20 @@ async function sendLineMessage(userId, message) {
       }
     );
     
-    console.log('LINE 訊息發送成功:', response.status);
+    console.log('LINE API 回應狀態:', response.status);
+    console.log('LINE API 回應資料:', response.data);
     return true;
     
   } catch (error) {
-    console.error('發送 LINE 訊息失敗:', error.response?.data || error.message);
+    console.error('發送 LINE 訊息失敗:');
+    console.error('錯誤類型:', error.name);
+    console.error('錯誤訊息:', error.message);
+    
+    if (error.response) {
+      console.error('HTTP 狀態碼:', error.response.status);
+      console.error('回應資料:', error.response.data);
+    }
+    
     return false;
   }
 }
