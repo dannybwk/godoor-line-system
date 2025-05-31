@@ -14,7 +14,7 @@ const config = {
 
 // Browserless 設定（免費額度每月 1000 次）
 const browserlessConfig = {
-  token: process.env.BROWSERLESS_TOKEN || 'demo', // 需要註冊取得免費 token
+  token: process.env.BROWSERLESS_TOKEN || 'demo',
   baseUrl: 'https://chrome.browserless.io'
 };
 
@@ -351,7 +351,7 @@ async function uploadToGoDoorWithBrowserless(eventData, showInApp = true) {
       email: cleanString(eventData.email)
     };
     
-    // 建立 Puppeteer 腳本 - 修正格式
+    // 建立 Puppeteer 腳本
     const puppeteerScript = `
 const puppeteer = require('puppeteer');
 
@@ -364,10 +364,8 @@ const puppeteer = require('puppeteer');
   try {
     console.log('開始自動上架流程...');
     
-    // 設定較長的超時時間
     page.setDefaultTimeout(30000);
     
-    // 前往果多後台
     await page.goto('${goDoorConfig.baseUrl}', { 
       waitUntil: 'networkidle2',
       timeout: 30000 
@@ -375,14 +373,12 @@ const puppeteer = require('puppeteer');
     
     console.log('已到達果多後台');
     
-    // 檢查是否需要登入
     await page.waitForTimeout(2000);
     const needLogin = await page.$('input[type="password"]') !== null;
     
     if (needLogin) {
       console.log('需要登入，開始填入帳號密碼...');
       
-      // 等待並填入登入資訊
       try {
         await page.waitForSelector('input[type="text"], input[name*="user"], input[name*="account"]', { timeout: 10000 });
         await page.type('input[type="text"], input[name*="user"], input[name*="account"]', '${goDoorConfig.username}');
@@ -392,7 +388,6 @@ const puppeteer = require('puppeteer');
         
         console.log('已填入登入資訊，點擊登入按鈕...');
         
-        // 點擊登入
         const loginButton = await page.$('button[type="submit"], input[type="submit"]');
         if (loginButton) {
           await loginButton.click();
@@ -406,16 +401,13 @@ const puppeteer = require('puppeteer');
       console.log('已經登入狀態');
     }
     
-    // 尋找新增活動功能
     console.log('尋找新增活動功能...');
     await page.waitForTimeout(3000);
     
-    // 嘗試多種方式找到新增活動按鈕
     let foundCreateButton = false;
     
     try {
-      // 方法1: 尋找包含"活動"和"新增"的按鈕
-      const allButtons = await page.$('a, button');
+      const allButtons = await page.$$('a, button');
       for (let button of allButtons) {
         const text = await page.evaluate(el => el.textContent.toLowerCase(), button);
         if (text.includes('活動') && (text.includes('新增') || text.includes('創建') || text.includes('建立'))) {
@@ -426,7 +418,6 @@ const puppeteer = require('puppeteer');
         }
       }
       
-      // 方法2: 如果沒找到，嘗試直接導航到新增頁面
       if (!foundCreateButton) {
         console.log('未找到新增按鈕，嘗試直接導航...');
         await page.goto('${goDoorConfig.baseUrl}/events/create', { 
@@ -442,7 +433,6 @@ const puppeteer = require('puppeteer');
     await page.waitForTimeout(3000);
     console.log('準備填寫表單...');
     
-    // 填寫活動表單
     const fieldsToFill = {
       '活動名稱': '${cleanEventData.name}',
       '活動描述': '${cleanEventData.description}',
@@ -459,19 +449,17 @@ const puppeteer = require('puppeteer');
       '聯絡信箱': '${cleanEventData.email}'
     };
     
-    // 填寫所有欄位
     let fieldsFilledCount = 0;
     for (const [fieldName, value] of Object.entries(fieldsToFill)) {
       if (value && value.trim() !== '') {
         try {
-          // 嘗試多種選擇器
           const selectors = [
-            \`input[name*="\${fieldName}"]\`,
-            \`textarea[name*="\${fieldName}"]\`,
-            \`input[placeholder*="\${fieldName}"]\`,
-            \`textarea[placeholder*="\${fieldName}"]\`,
-            \`input[id*="\${fieldName}"]\`,
-            \`textarea[id*="\${fieldName}"]\`
+            'input[name*="' + fieldName + '"]',
+            'textarea[name*="' + fieldName + '"]',
+            'input[placeholder*="' + fieldName + '"]',
+            'textarea[placeholder*="' + fieldName + '"]',
+            'input[id*="' + fieldName + '"]',
+            'textarea[id*="' + fieldName + '"]'
           ];
           
           let fieldFound = false;
@@ -480,12 +468,11 @@ const puppeteer = require('puppeteer');
             if (field) {
               await field.click();
               await field.focus();
-              // 清空欄位
               await page.keyboard.down('Control');
               await page.keyboard.press('KeyA');
               await page.keyboard.up('Control');
               await field.type(value, { delay: 50 });
-              console.log(\`已填寫 \${fieldName}: \${value.substring(0, 50)}...\`);
+              console.log('已填寫 ' + fieldName + ': ' + value.substring(0, 50) + '...');
               fieldsFilledCount++;
               fieldFound = true;
               break;
@@ -493,31 +480,28 @@ const puppeteer = require('puppeteer');
           }
           
           if (!fieldFound) {
-            console.log(\`未找到欄位: \${fieldName}\`);
+            console.log('未找到欄位: ' + fieldName);
           }
         } catch (e) {
-          console.log(\`填寫 \${fieldName} 時發生錯誤: \${e.message}\`);
+          console.log('填寫 ' + fieldName + ' 時發生錯誤: ' + e.message);
         }
       }
     }
     
-    console.log(\`總共填寫了 \${fieldsFilledCount} 個欄位\`);
+    console.log('總共填寫了 ' + fieldsFilledCount + ' 個欄位');
     
-    // 重要：設定公開程度
     const showInApp = ${showInApp};
     console.log('設定公開程度:', showInApp ? '完全公開' : '半公開');
     
     if (!showInApp) {
-      // 尋找並勾選"半公開"選項
       try {
         console.log('開始尋找半公開選項...');
         
-        // 嘗試找到半公開的選項
-        const visibilityOptions = await page.$('input[type="radio"], input[type="checkbox"]');
+        const visibilityOptions = await page.$$('input[type="radio"], input[type="checkbox"]');
         
         for (let option of visibilityOptions) {
           const labelText = await page.evaluate(el => {
-            const label = el.closest('label') || document.querySelector(\`label[for="\${el.id}"]\`);
+            const label = el.closest('label') || document.querySelector('label[for="' + el.id + '"]');
             return label ? label.textContent : '';
           }, option);
           
@@ -534,10 +518,9 @@ const puppeteer = require('puppeteer');
           }
         }
         
-        // 也檢查下拉選單
-        const selectElements = await page.$('select');
+        const selectElements = await page.$$('select');
         for (let select of selectElements) {
-          const options = await select.$('option');
+          const options = await select.$$('option');
           for (let option of options) {
             const text = await page.evaluate(el => el.textContent.toLowerCase(), option);
             if (text.includes('半公開') || text.includes('不公開')) {
@@ -555,16 +538,9 @@ const puppeteer = require('puppeteer');
     
     console.log('準備提交表單...');
     
-    // 提交表單
     const submitSelectors = [
       'button[type="submit"]',
-      'input[type="submit"]', 
-      'button:contains("提交")',
-      'button:contains("保存")',
-      'button:contains("確定")',
-      'button:contains("送出")',
-      'button:contains("建立")',
-      'button:contains("新增")'
+      'input[type="submit"]'
     ];
     
     let submitted = false;
@@ -578,7 +554,7 @@ const puppeteer = require('puppeteer');
           break;
         }
       } catch (e) {
-        console.log(\`嘗試 \${selector} 失敗: \${e.message}\`);
+        console.log('嘗試 ' + selector + ' 失敗: ' + e.message);
       }
     }
     
@@ -587,25 +563,21 @@ const puppeteer = require('puppeteer');
       await page.keyboard.press('Enter');
     }
     
-    // 等待提交完成
     await page.waitForTimeout(5000);
     console.log('表單提交完成，準備取得活動網址...');
     
-    // 取得活動網址
     let eventUrl = page.url();
     console.log('當前頁面網址:', eventUrl);
     
-    // 如果當前網址不包含 event，嘗試尋找活動連結
     if (!eventUrl.includes('/event/') && !eventUrl.includes('/register/')) {
       console.log('當前網址不是活動頁面，尋找活動連結...');
       
       try {
-        const eventLinks = await page.$('a[href*="/event/"], a[href*="/register/"]');
+        const eventLinks = await page.$$('a[href*="/event/"], a[href*="/register/"]');
         if (eventLinks.length > 0) {
           eventUrl = await page.evaluate(el => el.href, eventLinks[eventLinks.length - 1]);
           console.log('找到活動連結:', eventUrl);
         } else {
-          // 生成預設的活動網址格式
           const eventId = Date.now();
           eventUrl = '${goDoorConfig.baseUrl}/event/register/' + eventId;
           console.log('生成預設活動網址:', eventUrl);
@@ -618,7 +590,6 @@ const puppeteer = require('puppeteer');
     
     console.log('最終活動網址:', eventUrl);
     
-    // 返回結果
     const result = { 
       success: true, 
       eventUrl: eventUrl,
@@ -643,7 +614,6 @@ const puppeteer = require('puppeteer');
 })();
     `;
     
-    // 發送到 Browserless
     console.log('發送腳本到 Browserless...');
     console.log('腳本長度:', puppeteerScript.length, '字符');
     
@@ -658,7 +628,7 @@ const puppeteer = require('puppeteer');
         headers: {
           'Content-Type': 'application/json'
         },
-        timeout: 120000 // 增加到 120 秒超時
+        timeout: 120000
       }
     );
     
@@ -667,9 +637,7 @@ const puppeteer = require('puppeteer');
     
     let result;
     try {
-      // 嘗試解析回應
       if (typeof response.data === 'string') {
-        // 如果回應是字串，嘗試找到 JSON 部分
         const jsonMatch = response.data.match(/\{.*\}/);
         if (jsonMatch) {
           result = JSON.parse(jsonMatch[0]);
@@ -706,53 +674,6 @@ const puppeteer = require('puppeteer');
       success: false,
       error: error.message,
       details: error.response?.data,
-      message: '活動上架失敗'
-    };
-  }
-}.success) {
-      console.log('✅ Browserless 自動上架成功:', result.eventUrl);
-      console.log('✅ 公開設定:', result.visibility);
-      return {
-        success: true,
-        eventUrl: result.eventUrl,
-        showInApp: result.showInApp,
-        visibility: result.visibility,
-        fieldsFilledCount: result.fieldsFilledCount,
-        message: `活動已成功上架到果多後台（${result.visibility}）`
-      };
-    } else {
-      throw new Error(result.error || '未知錯誤');
-    }
-    
-  } catch (error) {
-    console.error('❌ Browserless 自動上架失敗:', error);
-    console.error('錯誤詳細:', error.response?.data || error.message);
-    return {
-      success: false,
-      error: error.message,
-      details: error.response?.data,
-      message: '活動上架失敗'
-    };
-  }
-}.success) {
-      console.log('✅ Browserless 自動上架成功:', result.eventUrl);
-      console.log('✅ 公開設定:', result.visibility);
-      return {
-        success: true,
-        eventUrl: result.eventUrl,
-        showInApp: result.showInApp,
-        visibility: result.visibility,
-        message: `活動已成功上架到果多後台（${result.visibility}）`
-      };
-    } else {
-      throw new Error(result.error);
-    }
-    
-  } catch (error) {
-    console.error('❌ Browserless 自動上架失敗:', error);
-    return {
-      success: false,
-      error: error.message,
       message: '活動上架失敗'
     };
   }
