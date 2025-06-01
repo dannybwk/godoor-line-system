@@ -183,6 +183,333 @@ app.get('/create-event', (req, res) => {
   `);
 });
 
+// 測試用快速建立活動頁面
+app.get('/quick-test-event', (req, res) => {
+  const userId = req.query.userId || '';
+  
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="zh-TW">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>快速測試 - 建立活動</title>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                margin: 0;
+                padding: 20px;
+                background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+                min-height: 100vh;
+            }
+            .container {
+                background: white;
+                border-radius: 16px;
+                padding: 32px;
+                max-width: 500px;
+                margin: 0 auto;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            }
+            .logo { font-size: 48px; margin-bottom: 16px; text-align: center; }
+            h1 { color: #333; margin-bottom: 16px; text-align: center; }
+            .test-badge {
+                background: #ff6b6b;
+                color: white;
+                padding: 4px 12px;
+                border-radius: 20px;
+                font-size: 12px;
+                display: inline-block;
+                margin-bottom: 20px;
+            }
+            .quick-form {
+                display: grid;
+                gap: 15px;
+            }
+            label {
+                font-weight: bold;
+                color: #333;
+                margin-bottom: 5px;
+                display: block;
+            }
+            input, select, textarea {
+                width: 100%;
+                padding: 12px;
+                border: 2px solid #ddd;
+                border-radius: 8px;
+                font-size: 14px;
+                box-sizing: border-box;
+            }
+            input:focus, select:focus, textarea:focus {
+                outline: none;
+                border-color: #ff6b6b;
+            }
+            .btn {
+                background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+                color: white;
+                border: none;
+                padding: 15px 30px;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: transform 0.2s;
+            }
+            .btn:hover { transform: translateY(-2px); }
+            .btn:disabled { 
+                opacity: 0.6; 
+                cursor: not-allowed; 
+                transform: none;
+            }
+            .preset-btns {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+            .preset-btn {
+                background: #f8f9fa;
+                border: 2px solid #ddd;
+                padding: 10px;
+                border-radius: 8px;
+                cursor: pointer;
+                text-align: center;
+                font-size: 12px;
+                transition: all 0.2s;
+            }
+            .preset-btn:hover {
+                border-color: #ff6b6b;
+                background: #fff5f5;
+            }
+            .status {
+                margin-top: 15px;
+                padding: 12px;
+                border-radius: 8px;
+                font-size: 14px;
+                display: none;
+            }
+            .status.loading { background: #e3f2fd; color: #1976d2; display: block; }
+            .status.success { background: #e8f5e8; color: #2e7d32; display: block; }
+            .status.error { background: #ffebee; color: #c62828; display: block; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="logo">🚀</div>
+            <h1>快速測試建立活動</h1>
+            <div class="test-badge">🧪 測試模式</div>
+            
+            <div class="preset-btns">
+                <div class="preset-btn" onclick="fillPreset('workshop')">
+                    🎨 工作坊範例
+                </div>
+                <div class="preset-btn" onclick="fillPreset('seminar')">
+                    📚 講座範例
+                </div>
+                <div class="preset-btn" onclick="fillPreset('social')">
+                    🎉 社交活動範例
+                </div>
+                <div class="preset-btn" onclick="fillPreset('sports')">
+                    ⚽ 運動活動範例
+                </div>
+            </div>
+            
+            <form id="quickForm" class="quick-form">
+                <div>
+                    <label>活動名稱</label>
+                    <input type="text" name="activityName" required>
+                </div>
+                
+                <div>
+                    <label>活動描述</label>
+                    <textarea name="description" rows="3"></textarea>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label>開始日期</label>
+                        <input type="date" name="startDate" required>
+                    </div>
+                    <div>
+                        <label>開始時間</label>
+                        <input type="time" name="startTime" required>
+                    </div>
+                </div>
+                
+                <div>
+                    <label>活動地點</label>
+                    <input type="text" name="location" required>
+                </div>
+                
+                <div>
+                    <label>主辦單位</label>
+                    <input type="text" name="organizer" required>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label>人數上限</label>
+                        <input type="number" name="maxParticipants" value="30" min="1">
+                    </div>
+                    <div>
+                        <label>活動費用</label>
+                        <input type="number" name="price" value="0" min="0">
+                    </div>
+                </div>
+                
+                <div>
+                    <label>公開設定</label>
+                    <select name="publicity">
+                        <option value="public">完全公開（在APP顯示）</option>
+                        <option value="private">半公開（不在APP顯示）</option>
+                    </select>
+                </div>
+                
+                <input type="hidden" name="lineUserId" value="${userId}">
+                
+                <button type="submit" class="btn" id="submitBtn">
+                    🚀 快速建立測試活動
+                </button>
+            </form>
+            
+            <div id="status" class="status"></div>
+        </div>
+
+        <script>
+            // 預設範例資料
+            const presets = {
+                workshop: {
+                    activityName: 'AI 程式設計工作坊',
+                    description: '學習如何使用 AI 工具提升程式開發效率，適合初學者參加',
+                    location: '台北市信義區信義路五段7號',
+                    organizer: 'TechHub Taiwan',
+                    maxParticipants: 25,
+                    price: 1500
+                },
+                seminar: {
+                    activityName: '數位轉型趨勢講座',
+                    description: '探討 2025 年企業數位轉型的最新趨勢與實務案例分享',
+                    location: '台北市中山區南京東路二段',
+                    organizer: '數位創新協會',
+                    maxParticipants: 80,
+                    price: 0
+                },
+                social: {
+                    activityName: '週末咖啡聚會',
+                    description: '輕鬆的週末聚會，認識新朋友，分享生活趣事',
+                    location: '台北市大安區敦化南路一段',
+                    organizer: '咖啡愛好者社群',
+                    maxParticipants: 15,
+                    price: 200
+                },
+                sports: {
+                    activityName: '週日羽球練習',
+                    description: '歡迎各程度球友參加，一起運動流汗增進球技',
+                    location: '台北市松山區體育館',
+                    organizer: '羽球同好會',
+                    maxParticipants: 12,
+                    price: 100
+                }
+            };
+            
+            // 設定預設日期時間
+            window.onload = function() {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                document.querySelector('input[name="startDate"]').value = tomorrow.toISOString().split('T')[0];
+                document.querySelector('input[name="startTime"]').value = '14:00';
+            };
+            
+            // 填入預設範例
+            function fillPreset(type) {
+                const preset = presets[type];
+                const form = document.getElementById('quickForm');
+                
+                Object.keys(preset).forEach(key => {
+                    const input = form.querySelector(\`[name="\${key}"]\`);
+                    if (input) {
+                        input.value = preset[key];
+                    }
+                });
+            }
+            
+            // 表單提交
+            document.getElementById('quickForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const submitBtn = document.getElementById('submitBtn');
+                const status = document.getElementById('status');
+                
+                // 顯示載入狀態
+                submitBtn.disabled = true;
+                submitBtn.textContent = '⏳ 建立中...';
+                status.className = 'status loading';
+                status.textContent = '正在快速建立測試活動...';
+                
+                try {
+                    const formData = new FormData(this);
+                    const data = Object.fromEntries(formData.entries());
+                    
+                    // 轉換為後端期望的格式
+                    const eventData = {
+                        '活動名稱': data.activityName,
+                        '活動內容或備註（請盡量詳盡）': data.description,
+                        '活動開始日期': data.startDate,
+                        '活動開始時間': data.startTime,
+                        '活動結束日期': data.startDate, // 預設同一天
+                        '活動結束時間': '18:00',
+                        '活動地點': data.location,
+                        '活動主辦人或單位': data.organizer,
+                        '活動人數上限': data.maxParticipants,
+                        '活動費用': data.price,
+                        'LINE使用者ID（系統自動填寫，請保留我們才能通知您哦）': data.lineUserId,
+                        '要將活動公開曝光到果多APP上嗎？': data.publicity === 'public' ? '要（推薦到果多APP）' : '不要'
+                    };
+                    
+                    const response = await fetch('/webhook/form-submit', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(eventData)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        status.className = 'status success';
+                        status.textContent = \`✅ 測試活動「\${result.eventName}」建立成功！(\${result.visibility})\`;
+                        submitBtn.textContent = '✅ 建立完成';
+                        
+                        // 3秒後重置表單
+                        setTimeout(() => {
+                            this.reset();
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = '🚀 快速建立測試活動';
+                            status.style.display = 'none';
+                            // 重新設定預設日期時間
+                            const tomorrow = new Date();
+                            tomorrow.setDate(tomorrow.getDate() + 1);
+                            document.querySelector('input[name="startDate"]').value = tomorrow.toISOString().split('T')[0];
+                            document.querySelector('input[name="startTime"]').value = '14:00';
+                        }, 3000);
+                    } else {
+                        throw new Error(result.message || '建立失敗');
+                    }
+                    
+                } catch (error) {
+                    console.error('建立活動失敗:', error);
+                    status.className = 'status error';
+                    status.textContent = '❌ 建立失敗: ' + error.message;
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '🚀 快速建立測試活動';
+                }
+            });
+        </script>
+    </body>
+    </html>
+  `);
+});
+
 // 處理表單提交通知
 app.post('/webhook/form-submit', async (req, res) => {
   try {
@@ -584,10 +911,28 @@ async function handleLineEvents(body) {
               }]
             }
           });
+        } else if (text.includes('測試活動') || text.includes('快速測試')) {
+          // 測試活動的邏輯
+          const quickTestUrl = `${process.env.RENDER_EXTERNAL_URL || 'https://godoor-line-system.onrender.com'}/quick-test-event?userId=${encodeURIComponent(userId)}`;
+          
+          await sendReplyMessage(replyToken, {
+            type: 'template',
+            altText: '快速測試建立活動',
+            template: {
+              type: 'buttons',
+              title: '🚀 快速測試建立活動',
+              text: '測試專用，預填範例資料',
+              actions: [{
+                type: 'uri',
+                label: '開始快速測試',
+                uri: quickTestUrl
+              }]
+            }
+          });
         } else {
           await sendReplyMessage(replyToken, {
             type: 'text',
-            text: `👋 歡迎使用 GoDoor 活動小幫手！\n\n🎯 請輸入「建立活動」開始建立新活動\n\n您的訊息：${text}`
+            text: `👋 歡迎使用 GoDoor 活動小幫手！\n\n🎯 請輸入「建立活動」開始建立新活動\n🚀 請輸入「測試活動」快速建立測試活動\n\n您的訊息：${text}`
           });
         }
       }
@@ -623,4 +968,5 @@ app.listen(PORT, () => {
   console.log(`📱 LINE Bot webhook: /webhook`);
   console.log(`📝 Form webhook: /webhook/form-submit`);
   console.log(`🎯 Create event page: /create-event`);
+  console.log(`🚀 Quick test page: /quick-test-event`);
 });
