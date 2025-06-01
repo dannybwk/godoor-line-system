@@ -609,6 +609,9 @@ function parseEventData(formData) {
 }
 
 // 真實自動上架到果多後台
+// 找到您 server.js 中的 uploadToGoDoorWithBrowserless 函數
+// 將這個函數整個替換為以下版本：
+
 async function uploadToGoDoorWithBrowserless(eventData, showInApp = true) {
   try {
     console.log('🚀 開始自動上架到果多後台...');
@@ -627,6 +630,7 @@ async function uploadToGoDoorWithBrowserless(eventData, showInApp = true) {
       price: cleanString(String(eventData.price || '0'))
     };
     
+    // 修正：正確的 Browserless API 呼叫方式
     const response = await axios.post(
       `${browserlessConfig.baseUrl}/function?token=${browserlessConfig.token}`,
       {
@@ -666,7 +670,7 @@ const puppeteer = require('puppeteer');
     await page.waitForTimeout(3000);
     console.log('已到達新增活動頁面');
     
-    // 3. 填寫表單 - 使用真實的 ID
+    // 3. 填寫表單
     console.log('5. 開始填寫表單...');
     
     // 填寫活動標題
@@ -681,7 +685,7 @@ const puppeteer = require('puppeteer');
       console.log('❌ 填寫活動標題失敗:', e.message);
     }
     
-    // 填寫活動描述（如果有的話）
+    // 填寫活動描述
     try {
       console.log('填寫活動描述...');
       const descriptionField = await page.$('textarea[id*="description"], textarea[name*="description"], #event-description');
@@ -729,7 +733,7 @@ const puppeteer = require('puppeteer');
       console.log('❌ 填寫主辦單位失敗:', e.message);
     }
     
-    // 4. 設定公開程度 - 使用真實的 ID
+    // 4. 設定公開程度
     const showInApp = ${showInApp};
     console.log('6. 設定公開程度:', showInApp ? '完全公開' : '半公開（不公開）');
     
@@ -738,7 +742,6 @@ const puppeteer = require('puppeteer');
         console.log('設定為不公開...');
         await page.waitForSelector('#private-event', { timeout: 5000 });
         
-        // 檢查是否已經勾選
         const isChecked = await page.evaluate(() => {
           return document.querySelector('#private-event').checked;
         });
@@ -756,7 +759,7 @@ const puppeteer = require('puppeteer');
       console.log('✅ 設定為完全公開');
     }
     
-    // 5. 提交表單 - 使用真實的 ID
+    // 5. 提交表單
     console.log('7. 準備提交表單...');
     await page.waitForTimeout(2000);
     
@@ -765,7 +768,6 @@ const puppeteer = require('puppeteer');
       await page.click('#send-review-button');
       console.log('✅ 已點擊「建立活動並送出審核」按鈕');
       
-      // 等待提交完成
       await page.waitForTimeout(5000);
       console.log('⏳ 等待提交完成...');
       
@@ -777,7 +779,6 @@ const puppeteer = require('puppeteer');
     let eventUrl = page.url();
     console.log('8. 當前頁面網址:', eventUrl);
     
-    // 如果還在新增頁面，嘗試等待跳轉
     if (eventUrl.includes('/event/new')) {
       console.log('等待頁面跳轉...');
       try {
@@ -789,7 +790,6 @@ const puppeteer = require('puppeteer');
       }
     }
     
-    // 如果還是沒有活動網址，生成一個預設的
     if (!eventUrl.includes('/event/') || eventUrl.includes('/new')) {
       const eventId = Date.now();
       eventUrl = 'https://mg.umita.tw/event/' + eventId;
@@ -819,7 +819,12 @@ const puppeteer = require('puppeteer');
         `,
         context: {}
       },
-      { timeout: 90000 }
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 90000
+      }
     );
     
     const result = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
