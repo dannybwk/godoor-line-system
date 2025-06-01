@@ -1,4 +1,24 @@
-const express = require('express');
+} catch (error) {
+    console.error('自動上架失敗:', error);
+    
+    // 記錄失敗資訊供內部處理（不會發送給使用者）
+    console.log('需要手動處理的活動資料:', {
+      name: eventData.name,
+      organizer: eventData.organizer,
+      location: eventData.location,
+      startDate: eventData.startDate,
+      showInApp: showInApp,
+      error: error.message
+    });
+    
+    return { 
+      success: false, 
+      error: error.message,
+      // 不再包含敏感的手動操作指引
+      message: '自動上架失敗，已記錄供內部處理'
+    };
+  }
+      const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 
@@ -236,7 +256,7 @@ app.post('/webhook/form-submit', async (req, res) => {
             text: successMessage
           });
         } else if (eventInfo.lineUserId) {
-          const fallbackMessage = `⚠️ 自動上架遇到問題！\n\n📝 請手動到果多後台建立活動：\n1. 前往 https://mg.umita.tw/login\n2. 登入帳號：果多，密碼：000\n3. 點選「活動列表」→「+ 建立活動」\n4. 填寫活動資料\n5. ${showInApp ? '保持預設公開設定' : '勾選「此活動為『不公開』」'}`;
+          const fallbackMessage = `⚠️ 自動上架遇到問題，但別擔心！\n\n📅 活動名稱：${eventInfo.name}\n📍 活動地點：${eventInfo.location}\n📊 主辦單位：${eventInfo.organizer}\n\n📱 您也可以直接使用果多APP免費上架活動：\n\n🔗 下載果多APP：\nhttps://funaging.app.link/godoorline\n\n在APP中可以輕鬆建立和管理您的活動！\n\n如需其他協助，請聯繫我們的客服團隊。`;
           
           await sendLineMessage(eventInfo.lineUserId, {
             type: 'text',
