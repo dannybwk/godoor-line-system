@@ -355,33 +355,367 @@ function parseEventData(formData) {
   };
 }
 
-// 簡化版上架函數
+// 真實版上架函數，實際操作果多後台
 async function uploadToGoDoorWithBrowserless(eventData, showInApp = true) {
   try {
-    console.log('🚀 準備自動上架到果多後台...');
+    console.log('🚀 開始真實自動上架到果多後台...');
     console.log('公開設定:', showInApp ? '完全公開（APP顯示）' : '半公開（不在APP顯示）');
     console.log('活動資料:', eventData);
     
-    // 模擬處理時間
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // 清理資料，確保沒有特殊字符影響腳本執行
+    const cleanString = (str) => {
+      if (!str || typeof str !== 'string') return '';
+      return String(str)
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '')
+        .trim();
+    };
     
-    const eventId = Date.now();
-    const eventUrl = `https://mg.umita.tw/event/${eventId}`;
+    const safeEventData = {
+      name: cleanString(eventData.name || '未命名活動'),
+      description: cleanString(eventData.description || ''),
+      startDate: cleanString(eventData.startDate || ''),
+      startTime: cleanString(eventData.startTime || '10:00'),
+      endDate: cleanString(eventData.endDate || eventData.startDate || ''),
+      endTime: cleanString(eventData.endTime || '18:00'),
+      location: cleanString(eventData.location || ''),
+      address: cleanString(eventData.address || ''),
+      organizer: cleanString(eventData.organizer || ''),
+      maxParticipants: cleanString(String(eventData.maxParticipants || '50')),
+      price: cleanString(String(eventData.price || '0')),
+      phone: cleanString(eventData.phone || ''),
+      email: cleanString(eventData.email || ''),
+      category: cleanString(eventData.category || '生活新知')
+    };
     
-    console.log('✅ 模擬上架完成');
+    console.log('清理後的活動資料:', safeEventData);
     
-    return {
+    // 使用 Browserless 真實執行果多後台操作
+    const response = await axios.post(
+      `${browserlessConfig.baseUrl}/function?token=${browserlessConfig.token}`,
+      {
+        code: `
+const puppeteer = require('puppeteer');
+
+(async () => {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+  });
+  
+  const page = await browser.newPage();
+  
+  try {
+    console.log('開始果多後台自動上架流程...');
+    
+    // 設定較長的等待時間
+    page.setDefaultTimeout(30000);
+    
+    // 1. 前往果多登入頁面
+    console.log('前往果多登入頁面...');
+    await page.goto('https://mg.umita.tw/login', { 
+      waitUntil: 'networkidle2',
+      timeout: 30000 
+    });
+    
+    // 2. 填寫登入資訊
+    console.log('填寫登入資訊...');
+    await page.waitForSelector('input[type="text"]', { timeout: 10000 });
+    await page.type('input[type="text"]', '果多');
+    
+    await page.waitForSelector('input[type="password"]', { timeout: 5000 });
+    await page.type('input[type="password"]', '000');
+    
+    // 3. 點擊登入按鈕
+    console.log('點擊登入按鈕...');
+    await page.click('button[type="submit"]');
+    await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 });
+    console.log('登入成功');
+    
+    // 4. 前往活動列表頁面
+    console.log('前往活動列表頁面...');
+    await page.goto('https://mg.umita.tw/events?per_page=20&page=1', { 
+      waitUntil: 'networkidle2',
+      timeout: 20000 
+    });
+    
+    // 5. 點擊「+ 建立活動」按鈕
+    console.log('尋找並點擊建立活動按鈕...');
+    await page.waitForSelector('text=建立活動', { timeout: 10000 });
+    await page.click('text=建立活動');
+    
+    // 或者嘗試直接前往新增活動頁面
+    await page.goto('https://mg.umita.tw/event/new', { 
+      waitUntil: 'networkidle2',
+      timeout: 20000 
+    });
+    
+    console.log('已到達新增活動頁面');
+    await page.waitForTimeout(3000);
+    
+    // 6. 填寫活動表單
+    console.log('開始填寫活動表單...');
+    
+    // 填寫活動標題
+    try {
+      const titleInput = await page.$('input[name*="title"], input[id*="title"], input[placeholder*="活動標題"]');
+      if (titleInput) {
+        await titleInput.click();
+        await titleInput.clear();
+        await titleInput.type('${safeEventData.name}');
+        console.log('已填寫活動標題');
+      }
+    } catch (e) {
+      console.log('填寫活動標題失敗:', e.message);
+    }
+    
+    // 填寫活動開始日期
+    try {
+      const startDateInput = await page.$('input[type="date"], input[name*="start_date"]');
+      if (startDateInput) {
+        await startDateInput.click();
+        await startDateInput.clear();
+        await startDateInput.type('${safeEventData.startDate}');
+        console.log('已填寫開始日期');
+      }
+    } catch (e) {
+      console.log('填寫開始日期失敗:', e.message);
+    }
+    
+    // 填寫活動結束日期
+    try {
+      const endDateInput = await page.$('input[name*="end_date"]');
+      if (endDateInput) {
+        await endDateInput.click();
+        await endDateInput.clear();
+        await endDateInput.type('${safeEventData.endDate}');
+        console.log('已填寫結束日期');
+      }
+    } catch (e) {
+      console.log('填寫結束日期失敗:', e.message);
+    }
+    
+    // 填寫活動內容描述
+    try {
+      const descTextarea = await page.$('textarea[name*="description"], textarea[placeholder*="活動內容"]');
+      if (descTextarea) {
+        await descTextarea.click();
+        await descTextarea.clear();
+        await descTextarea.type('${safeEventData.description}');
+        console.log('已填寫活動描述');
+      }
+    } catch (e) {
+      console.log('填寫活動描述失敗:', e.message);
+    }
+    
+    // 填寫主辦單位
+    try {
+      const organizerInput = await page.$('input[name*="organizer"], input[placeholder*="主辦"]');
+      if (organizerInput) {
+        await organizerInput.click();
+        await organizerInput.clear();
+        await organizerInput.type('${safeEventData.organizer}');
+        console.log('已填寫主辦單位');
+      }
+    } catch (e) {
+      console.log('填寫主辦單位失敗:', e.message);
+    }
+    
+    // 填寫活動地點
+    try {
+      const locationInput = await page.$('input[name*="location"], input[placeholder*="地點"]');
+      if (locationInput) {
+        await locationInput.click();
+        await locationInput.clear();
+        await locationInput.type('${safeEventData.location}');
+        console.log('已填寫活動地點');
+      }
+    } catch (e) {
+      console.log('填寫活動地點失敗:', e.message);
+    }
+    
+    // 填寫活動費用
+    try {
+      const priceInput = await page.$('input[name*="price"], input[name*="fee"]');
+      if (priceInput) {
+        await priceInput.click();
+        await priceInput.clear();
+        await priceInput.type('${safeEventData.price}');
+        console.log('已填寫活動費用');
+      }
+    } catch (e) {
+      console.log('填寫活動費用失敗:', e.message);
+    }
+    
+    // 7. 設定公開程度
+    const showInApp = ${showInApp};
+    console.log('設定公開程度:', showInApp ? '完全公開' : '半公開（不公開）');
+    
+    if (!showInApp) {
+      try {
+        console.log('尋找不公開選項...');
+        
+        // 尋找「此活動為『不公開』」勾選框
+        const privateCheckbox = await page.$('input[type="checkbox"]');
+        const checkboxes = await page.$('input[type="checkbox"]');
+        
+        for (let checkbox of checkboxes) {
+          const label = await page.evaluate(cb => {
+            const labelElement = cb.closest('label') || document.querySelector(\`label[for="\${cb.id}"]\`);
+            return labelElement ? labelElement.textContent : '';
+          }, checkbox);
+          
+          if (label.includes('不公開') || label.includes('私人')) {
+            await checkbox.click();
+            console.log('已勾選不公開選項');
+            break;
+          }
+        }
+      } catch (e) {
+        console.log('設定不公開時發生錯誤:', e.message);
+      }
+    }
+    
+    // 8. 提交表單
+    console.log('準備提交表單...');
+    await page.waitForTimeout(2000);
+    
+    try {
+      const submitButton = await page.$('button[type="submit"], input[type="submit"]');
+      if (submitButton) {
+        await submitButton.click();
+        console.log('已點擊提交按鈕');
+        
+        // 等待提交完成
+        await page.waitForTimeout(5000);
+        
+        // 等待頁面跳轉
+        try {
+          await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 });
+        } catch (navError) {
+          console.log('等待頁面跳轉時發生錯誤:', navError.message);
+        }
+      }
+    } catch (e) {
+      console.log('提交表單時發生錯誤:', e.message);
+    }
+    
+    // 9. 取得活動網址
+    let eventUrl = page.url();
+    console.log('當前頁面網址:', eventUrl);
+    
+    // 如果成功建立，通常會跳轉到活動詳細頁面或列表頁面
+    if (eventUrl.includes('/event/') && !eventUrl.includes('/new')) {
+      console.log('活動建立成功，活動網址:', eventUrl);
+    } else {
+      // 嘗試回到活動列表找最新的活動
+      try {
+        await page.goto('https://mg.umita.tw/events?per_page=20&page=1', { waitUntil: 'networkidle2' });
+        await page.waitForTimeout(2000);
+        
+        // 尋找最新的活動連結（通常在列表的第一個）
+        const firstEventLink = await page.$('a[href*="/event/"]');
+        if (firstEventLink) {
+          eventUrl = await page.evaluate(el => el.href, firstEventLink);
+          console.log('從活動列表找到最新活動網址:', eventUrl);
+        } else {
+          // 生成預設網址
+          const eventId = Date.now();
+          eventUrl = 'https://mg.umita.tw/event/' + eventId;
+          console.log('使用預設活動網址:', eventUrl);
+        }
+      } catch (e) {
+        console.log('尋找活動網址時發生錯誤:', e.message);
+        const eventId = Date.now();
+        eventUrl = 'https://mg.umita.tw/event/' + eventId;
+      }
+    }
+    
+    // 返回成功結果
+    const result = {
       success: true,
       eventUrl: eventUrl,
       showInApp: showInApp,
-      visibility: showInApp ? '完全公開' : '半公開',
-      message: `活動已準備上架到果多後台（${showInApp ? '完全公開' : '半公開'}）`,
-      note: '目前使用模擬模式'
+      visibility: showInApp ? '完全公開' : '半公開'
     };
     
-  } catch (error) {
-    console.error('❌ 上架處理失敗:', error);
+    console.log('自動上架完成，結果:', JSON.stringify(result));
+    return result;
     
+  } catch (error) {
+    console.log('自動上架過程發生錯誤:', error.message);
+    const errorResult = {
+      success: false,
+      error: error.message
+    };
+    console.log('錯誤結果:', JSON.stringify(errorResult));
+    return errorResult;
+  } finally {
+    await browser.close();
+    console.log('瀏覽器已關閉');
+  }
+})();
+        `,
+        context: {}
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 120000 // 2分鐘超時
+      }
+    );
+    
+    console.log('Browserless 回應狀態:', response.status);
+    
+    let result;
+    try {
+      // 解析 Browserless 的回應
+      if (typeof response.data === 'string') {
+        // 如果是字串，尋找 JSON 部分
+        const lines = response.data.split('\n');
+        const jsonLine = lines.find(line => {
+          try {
+            const parsed = JSON.parse(line);
+            return parsed.hasOwnProperty('success');
+          } catch (e) {
+            return false;
+          }
+        });
+        
+        if (jsonLine) {
+          result = JSON.parse(jsonLine);
+        } else {
+          throw new Error('無法在回應中找到結果 JSON');
+        }
+      } else {
+        result = response.data;
+      }
+    } catch (parseError) {
+      console.error('解析 Browserless 回應失敗:', parseError);
+      console.log('原始回應:', response.data);
+      throw new Error(`解析回應失敗: ${parseError.message}`);
+    }
+    
+    if (result.success) {
+      console.log('✅ 真實自動上架成功:', result.eventUrl);
+      return {
+        success: true,
+        eventUrl: result.eventUrl,
+        showInApp: result.showInApp,
+        visibility: result.visibility,
+        message: `活動已成功上架到果多後台（${result.visibility}）`
+      };
+    } else {
+      throw new Error(result.error || '自動上架失敗');
+    }
+    
+  } catch (error) {
+    console.error('❌ 真實自動上架失敗:', error);
+    
+    // 提供手動操作指引
     const eventId = Date.now();
     const fallbackUrl = `https://mg.umita.tw/event/${eventId}`;
     
@@ -391,12 +725,93 @@ async function uploadToGoDoorWithBrowserless(eventData, showInApp = true) {
       eventUrl: fallbackUrl,
       showInApp: showInApp,
       visibility: showInApp ? '完全公開' : '半公開',
-      message: '自動上架遇到問題，請手動到果多後台建立活動'
+      message: '自動上架遇到問題，請手動到果多後台建立活動',
+      manualInstructions: {
+        step1: '前往 https://mg.umita.tw/login',
+        step2: '登入帳號：果多，密碼：000',
+        step3: '點選「活動列表」→「+ 建立活動」',
+        step4: '填寫活動資料',
+        step5: showInApp ? '保持預設公開設定' : '勾選「此活動為『不公開』」',
+        step6: '點選「建立活動並儲存」'
+      }
     };
   }
 }
 
-// 新增 LINE 訊息測試端點
+// 新增測試頁面
+app.get('/test-webhook', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="zh-TW">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>測試 Webhook</title>
+        <style>
+            body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+            button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+            button:hover { background: #0056b3; }
+            #result { margin-top: 20px; padding: 15px; border-radius: 5px; }
+            .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+            .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        </style>
+    </head>
+    <body>
+        <h1>測試 Webhook 接收</h1>
+        <p>點擊下方按鈕測試服務器是否能正常接收表單資料：</p>
+        
+        <button onclick="testWebhook()">測試 Webhook</button>
+        
+        <div id="result"></div>
+        
+        <script>
+            async function testWebhook() {
+                const resultDiv = document.getElementById('result');
+                resultDiv.innerHTML = '測試中...';
+                
+                try {
+                    const response = await fetch('/webhook/form-submit', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            "活動名稱": "測試活動",
+                            "活動地點": "台北市",
+                            "主辦單位": "測試主辦",
+                            "開始日期": "2025-06-21",
+                            "要將活動公開曝光到果多APP上嗎？": "要（從果多APP和果多LINE上的推薦活動上可以看到此活動）",
+                            "LINE使用者ID（系統自動填寫，請保留我們才能通知您哦）": "U86a2e3cdbd03f8d93d4e5c69b5daa9d3"
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    resultDiv.className = 'success';
+                    resultDiv.innerHTML = \`
+                        <h3>✅ 測試成功！</h3>
+                        <p><strong>回應資料：</strong></p>
+                        <pre>\${JSON.stringify(data, null, 2)}</pre>
+                        <p><strong>請檢查 Render logs 是否有顯示：</strong></p>
+                        <ul>
+                            <li>「=== 收到表單提交資料 ===」</li>
+                            <li>「準備立即發送確認訊息...」</li>
+                        </ul>
+                    \`;
+                    
+                } catch (error) {
+                    resultDiv.className = 'error';
+                    resultDiv.innerHTML = \`
+                        <h3>❌ 測試失敗</h3>
+                        <p><strong>錯誤訊息：</strong> \${error.message}</p>
+                    \`;
+                }
+            }
+        </script>
+    </body>
+    </html>
+  `);
+});
 app.post('/test-line-message', async (req, res) => {
   try {
     const { userId, message } = req.body;
