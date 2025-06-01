@@ -630,21 +630,12 @@ async function uploadToGoDoorWithBrowserless(eventData, showInApp = true) {
       price: cleanString(String(eventData.price || '0'))
     };
     
-    // 修正：正確的 Browserless API 呼叫方式
+    // 修正：使用正確的 Browserless Function API 格式
     const response = await axios.post(
       `${browserlessConfig.baseUrl}/function?token=${browserlessConfig.token}`,
       {
         code: `
-const puppeteer = require('puppeteer');
-
-(async () => {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-  
-  const page = await browser.newPage();
-  
+export default async function ({ page, context }) {
   try {
     console.log('開始果多後台自動上架流程...');
     
@@ -679,8 +670,8 @@ const puppeteer = require('puppeteer');
       await page.waitForSelector('#event-title', { timeout: 5000 });
       await page.click('#event-title');
       await page.evaluate(() => document.querySelector('#event-title').value = '');
-      await page.type('#event-title', '${safeData.name}');
-      console.log('✅ 活動標題已填寫:', '${safeData.name}');
+      await page.type('#event-title', context.eventData.name);
+      console.log('✅ 活動標題已填寫:', context.eventData.name);
     } catch (e) {
       console.log('❌ 填寫活動標題失敗:', e.message);
     }
@@ -692,7 +683,7 @@ const puppeteer = require('puppeteer');
       if (descriptionField) {
         await descriptionField.click();
         await descriptionField.evaluate(el => el.value = '');
-        await descriptionField.type('${safeData.description}');
+        await descriptionField.type(context.eventData.description);
         console.log('✅ 活動描述已填寫');
       } else {
         console.log('⚠️ 未找到活動描述欄位');
@@ -708,8 +699,8 @@ const puppeteer = require('puppeteer');
       if (locationField) {
         await locationField.click();
         await locationField.evaluate(el => el.value = '');
-        await locationField.type('${safeData.location}');
-        console.log('✅ 活動地點已填寫:', '${safeData.location}');
+        await locationField.type(context.eventData.location);
+        console.log('✅ 活動地點已填寫:', context.eventData.location);
       } else {
         console.log('⚠️ 未找到活動地點欄位');
       }
@@ -724,8 +715,8 @@ const puppeteer = require('puppeteer');
       if (organizerField) {
         await organizerField.click();
         await organizerField.evaluate(el => el.value = '');
-        await organizerField.type('${safeData.organizer}');
-        console.log('✅ 主辦單位已填寫:', '${safeData.organizer}');
+        await organizerField.type(context.eventData.organizer);
+        console.log('✅ 主辦單位已填寫:', context.eventData.organizer);
       } else {
         console.log('⚠️ 未找到主辦單位欄位');
       }
@@ -734,7 +725,7 @@ const puppeteer = require('puppeteer');
     }
     
     // 4. 設定公開程度
-    const showInApp = ${showInApp};
+    const showInApp = context.showInApp;
     console.log('6. 設定公開程度:', showInApp ? '完全公開' : '半公開（不公開）');
     
     if (!showInApp) {
@@ -799,25 +790,31 @@ const puppeteer = require('puppeteer');
     console.log('✅ 自動上架完成！最終活動網址:', eventUrl);
     
     return {
-      success: true,
-      eventUrl: eventUrl,
-      showInApp: showInApp,
-      visibility: showInApp ? '完全公開' : '半公開'
+      data: {
+        success: true,
+        eventUrl: eventUrl,
+        showInApp: showInApp,
+        visibility: showInApp ? '完全公開' : '半公開'
+      },
+      type: 'application/json'
     };
     
   } catch (error) {
     console.log('❌ 自動上架過程發生錯誤:', error.message);
     return {
-      success: false,
-      error: error.message
+      data: {
+        success: false,
+        error: error.message
+      },
+      type: 'application/json'
     };
-  } finally {
-    await browser.close();
-    console.log('瀏覽器已關閉');
   }
-})();
+}
         `,
-        context: {}
+        context: {
+          eventData: safeData,
+          showInApp: showInApp
+        }
       },
       {
         headers: {
@@ -827,8 +824,21 @@ const puppeteer = require('puppeteer');
       }
     );
     
-    const result = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-    return result.success ? result : { success: false, error: result.error };
+    const result = response.data;
+    
+    // 檢查回應格式
+    if (result && result.success !== undefined) {
+      return result;
+    } else if (result && typeof result === 'string') {
+      try {
+        const parsed = JSON.parse(result);
+        return parsed;
+      } catch (e) {
+        return { success: false, error: 'Invalid response format' };
+      }
+    } else {
+      return { success: false, error: 'Unexpected response format' };
+    }
     
   } catch (error) {
     console.error('自動上架失敗:', error);
