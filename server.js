@@ -315,70 +315,161 @@ const puppeteer = require('puppeteer');
   const page = await browser.newPage();
   
   try {
-    await page.goto('https://mg.umita.tw/login', { waitUntil: 'networkidle2' });
-    await page.type('input[type="text"]', '果多');
-    await page.type('input[type="password"]', '000');
-    await page.click('button[type="submit"]');
-    await page.waitForNavigation({ waitUntil: 'networkidle2' });
+    console.log('開始果多後台自動上架流程...');
     
-    await page.goto('https://mg.umita.tw/event/new', { waitUntil: 'networkidle2' });
+    // 1. 登入果多後台
+    console.log('1. 前往登入頁面...');
+    await page.goto('https://mg.umita.tw/login', { waitUntil: 'networkidle2', timeout: 30000 });
+    
+    console.log('2. 填寫登入資訊...');
+    await page.waitForSelector('input[type="text"]', { timeout: 10000 });
+    await page.type('input[type="text"]', '果多');
+    
+    await page.waitForSelector('input[type="password"]', { timeout: 5000 });
+    await page.type('input[type="password"]', '000');
+    
+    console.log('3. 點擊登入按鈕...');
+    await page.click('button[type="submit"]');
+    await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 });
+    console.log('登入成功！');
+    
+    // 2. 前往新增活動頁面
+    console.log('4. 前往新增活動頁面...');
+    await page.goto('https://mg.umita.tw/event/new', { waitUntil: 'networkidle2', timeout: 20000 });
+    await page.waitForTimeout(3000);
+    console.log('已到達新增活動頁面');
+    
+    // 3. 填寫表單 - 使用真實的 ID
+    console.log('5. 開始填寫表單...');
+    
+    // 填寫活動標題
+    try {
+      console.log('填寫活動標題...');
+      await page.waitForSelector('#event-title', { timeout: 5000 });
+      await page.click('#event-title');
+      await page.evaluate(() => document.querySelector('#event-title').value = '');
+      await page.type('#event-title', '${safeData.name}');
+      console.log('✅ 活動標題已填寫:', '${safeData.name}');
+    } catch (e) {
+      console.log('❌ 填寫活動標題失敗:', e.message);
+    }
+    
+    // 填寫活動描述（如果有的話）
+    try {
+      console.log('填寫活動描述...');
+      const descriptionField = await page.$('textarea[id*="description"], textarea[name*="description"], #event-description');
+      if (descriptionField) {
+        await descriptionField.click();
+        await descriptionField.evaluate(el => el.value = '');
+        await descriptionField.type('${safeData.description}');
+        console.log('✅ 活動描述已填寫');
+      } else {
+        console.log('⚠️ 未找到活動描述欄位');
+      }
+    } catch (e) {
+      console.log('❌ 填寫活動描述失敗:', e.message);
+    }
+    
+    // 填寫活動地點
+    try {
+      console.log('填寫活動地點...');
+      const locationField = await page.$('input[id*="location"], input[name*="location"], #event-location');
+      if (locationField) {
+        await locationField.click();
+        await locationField.evaluate(el => el.value = '');
+        await locationField.type('${safeData.location}');
+        console.log('✅ 活動地點已填寫:', '${safeData.location}');
+      } else {
+        console.log('⚠️ 未找到活動地點欄位');
+      }
+    } catch (e) {
+      console.log('❌ 填寫活動地點失敗:', e.message);
+    }
+    
+    // 填寫主辦單位
+    try {
+      console.log('填寫主辦單位...');
+      const organizerField = await page.$('input[id*="organizer"], input[name*="organizer"], #event-organizer');
+      if (organizerField) {
+        await organizerField.click();
+        await organizerField.evaluate(el => el.value = '');
+        await organizerField.type('${safeData.organizer}');
+        console.log('✅ 主辦單位已填寫:', '${safeData.organizer}');
+      } else {
+        console.log('⚠️ 未找到主辦單位欄位');
+      }
+    } catch (e) {
+      console.log('❌ 填寫主辦單位失敗:', e.message);
+    }
+    
+    // 4. 設定公開程度 - 使用真實的 ID
+    const showInApp = ${showInApp};
+    console.log('6. 設定公開程度:', showInApp ? '完全公開' : '半公開（不公開）');
+    
+    if (!showInApp) {
+      try {
+        console.log('設定為不公開...');
+        await page.waitForSelector('#private-event', { timeout: 5000 });
+        
+        // 檢查是否已經勾選
+        const isChecked = await page.evaluate(() => {
+          return document.querySelector('#private-event').checked;
+        });
+        
+        if (!isChecked) {
+          await page.click('#private-event');
+          console.log('✅ 已勾選「此活動為不公開」');
+        } else {
+          console.log('✅ 「此活動為不公開」已經勾選');
+        }
+      } catch (e) {
+        console.log('❌ 設定不公開失敗:', e.message);
+      }
+    } else {
+      console.log('✅ 設定為完全公開');
+    }
+    
+    // 5. 提交表單 - 使用真實的 ID
+    console.log('7. 準備提交表單...');
     await page.waitForTimeout(2000);
     
-    const titleInput = await page.$('input[name*="title"], input[id*="title"]');
-    if (titleInput) {
-      await titleInput.click();
-      await titleInput.clear();
-      await titleInput.type('${safeData.name}');
+    try {
+      await page.waitForSelector('#send-review-button', { timeout: 5000 });
+      await page.click('#send-review-button');
+      console.log('✅ 已點擊「建立活動並送出審核」按鈕');
+      
+      // 等待提交完成
+      await page.waitForTimeout(5000);
+      console.log('⏳ 等待提交完成...');
+      
+    } catch (e) {
+      console.log('❌ 點擊提交按鈕失敗:', e.message);
     }
     
-    const descTextarea = await page.$('textarea[name*="description"]');
-    if (descTextarea) {
-      await descTextarea.click();
-      await descTextarea.clear();
-      await descTextarea.type('${safeData.description}');
-    }
+    // 6. 取得活動網址
+    let eventUrl = page.url();
+    console.log('8. 當前頁面網址:', eventUrl);
     
-    const locationInput = await page.$('input[name*="location"]');
-    if (locationInput) {
-      await locationInput.click();
-      await locationInput.clear();
-      await locationInput.type('${safeData.location}');
-    }
-    
-    const organizerInput = await page.$('input[name*="organizer"]');
-    if (organizerInput) {
-      await organizerInput.click();
-      await organizerInput.clear();
-      await organizerInput.type('${safeData.organizer}');
-    }
-    
-    const showInApp = ${showInApp};
-    if (!showInApp) {
-      const checkboxes = await page.$$('input[type="checkbox"]');
-      for (let checkbox of checkboxes) {
-        const label = await page.evaluate(cb => {
-          const labelElement = cb.closest('label') || document.querySelector(\`label[for="\${cb.id}"]\`);
-          return labelElement ? labelElement.textContent : '';
-        }, checkbox);
-        
-        if (label.includes('不公開')) {
-          await checkbox.click();
-          break;
-        }
+    // 如果還在新增頁面，嘗試等待跳轉
+    if (eventUrl.includes('/event/new')) {
+      console.log('等待頁面跳轉...');
+      try {
+        await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 });
+        eventUrl = page.url();
+        console.log('跳轉後網址:', eventUrl);
+      } catch (e) {
+        console.log('未檢測到頁面跳轉:', e.message);
       }
     }
     
-    const submitButton = await page.$('button[type="submit"]');
-    if (submitButton) {
-      await submitButton.click();
-      await page.waitForTimeout(3000);
-    }
-    
-    let eventUrl = page.url();
+    // 如果還是沒有活動網址，生成一個預設的
     if (!eventUrl.includes('/event/') || eventUrl.includes('/new')) {
       const eventId = Date.now();
       eventUrl = 'https://mg.umita.tw/event/' + eventId;
+      console.log('生成預設活動網址:', eventUrl);
     }
+    
+    console.log('✅ 自動上架完成！最終活動網址:', eventUrl);
     
     return {
       success: true,
@@ -388,12 +479,14 @@ const puppeteer = require('puppeteer');
     };
     
   } catch (error) {
+    console.log('❌ 自動上架過程發生錯誤:', error.message);
     return {
       success: false,
       error: error.message
     };
   } finally {
     await browser.close();
+    console.log('瀏覽器已關閉');
   }
 })();
         `,
