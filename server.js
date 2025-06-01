@@ -1,24 +1,4 @@
-} catch (error) {
-    console.error('自動上架失敗:', error);
-    
-    // 記錄失敗資訊供內部處理（不會發送給使用者）
-    console.log('需要手動處理的活動資料:', {
-      name: eventData.name,
-      organizer: eventData.organizer,
-      location: eventData.location,
-      startDate: eventData.startDate,
-      showInApp: showInApp,
-      error: error.message
-    });
-    
-    return { 
-      success: false, 
-      error: error.message,
-      // 不再包含敏感的手動操作指引
-      message: '自動上架失敗，已記錄供內部處理'
-    };
-  }
-      const express = require('express');
+const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 
@@ -203,7 +183,7 @@ app.get('/create-event', (req, res) => {
   `);
 });
 
-// 處理表單提交通知（核心功能）
+// 處理表單提交通知
 app.post('/webhook/form-submit', async (req, res) => {
   try {
     const formData = req.body;
@@ -335,18 +315,15 @@ const puppeteer = require('puppeteer');
   const page = await browser.newPage();
   
   try {
-    // 1. 登入果多後台
     await page.goto('https://mg.umita.tw/login', { waitUntil: 'networkidle2' });
     await page.type('input[type="text"]', '果多');
     await page.type('input[type="password"]', '000');
     await page.click('button[type="submit"]');
     await page.waitForNavigation({ waitUntil: 'networkidle2' });
     
-    // 2. 前往新增活動頁面
     await page.goto('https://mg.umita.tw/event/new', { waitUntil: 'networkidle2' });
     await page.waitForTimeout(2000);
     
-    // 3. 填寫表單
     const titleInput = await page.$('input[name*="title"], input[id*="title"]');
     if (titleInput) {
       await titleInput.click();
@@ -375,7 +352,6 @@ const puppeteer = require('puppeteer');
       await organizerInput.type('${safeData.organizer}');
     }
     
-    // 4. 設定公開程度
     const showInApp = ${showInApp};
     if (!showInApp) {
       const checkboxes = await page.$$('input[type="checkbox"]');
@@ -392,14 +368,12 @@ const puppeteer = require('puppeteer');
       }
     }
     
-    // 5. 提交表單
     const submitButton = await page.$('button[type="submit"]');
     if (submitButton) {
       await submitButton.click();
       await page.waitForTimeout(3000);
     }
     
-    // 6. 取得活動網址
     let eventUrl = page.url();
     if (!eventUrl.includes('/event/') || eventUrl.includes('/new')) {
       const eventId = Date.now();
@@ -433,7 +407,21 @@ const puppeteer = require('puppeteer');
     
   } catch (error) {
     console.error('自動上架失敗:', error);
-    return { success: false, error: error.message };
+    
+    console.log('需要手動處理的活動資料:', {
+      name: eventData.name,
+      organizer: eventData.organizer,
+      location: eventData.location,
+      startDate: eventData.startDate,
+      showInApp: showInApp,
+      error: error.message
+    });
+    
+    return { 
+      success: false, 
+      error: error.message,
+      message: '自動上架失敗，已記錄供內部處理'
+    };
   }
 }
 
