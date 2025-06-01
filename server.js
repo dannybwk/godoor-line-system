@@ -25,7 +25,7 @@ const goDoorConfig = {
   password: '000'
 };
 
-// 健康檢查
+// 健康檢查（增加 LINE 設定檢查）
 app.get('/', (req, res) => {
   res.json({ 
     status: 'OK', 
@@ -33,6 +33,7 @@ app.get('/', (req, res) => {
     timestamp: new Date().toISOString(),
     config: {
       hasAccessToken: !!config.channelAccessToken,
+      accessTokenLength: config.channelAccessToken ? config.channelAccessToken.length : 0,
       hasSecret: !!config.channelSecret,
       hasPrefillUrl: !!process.env.GOOGLE_FORM_PREFILL_URL,
       hasFormUrl: !!process.env.GOOGLE_FORM_URL
@@ -41,6 +42,10 @@ app.get('/', (req, res) => {
       autoUpload: true,
       semiPrivateEvents: true,
       immediateResponse: true
+    },
+    debug: {
+      nodeEnv: process.env.NODE_ENV,
+      port: process.env.PORT
     }
   });
 });
@@ -214,16 +219,39 @@ app.post('/webhook/form-submit', async (req, res) => {
     
     console.log('使用者選擇:', showInApp ? '要在APP中顯示' : '不要在APP中顯示（設為半公開）');
     
-    // 立即發送確認訊息
+    // 立即發送確認訊息（加強版）
+    let messageSent = false;
     if (eventInfo.lineUserId && eventInfo.lineUserId.trim() !== '' && eventInfo.lineUserId !== 'connection_test_123') {
-      console.log('立即發送確認訊息給:', eventInfo.lineUserId);
+      console.log('準備立即發送確認訊息...');
+      console.log('LINE User ID:', eventInfo.lineUserId);
+      console.log('LINE User ID 長度:', eventInfo.lineUserId.length);
+      console.log('Channel Access Token 存在:', !!config.channelAccessToken);
       
-      const immediateMessage = `✅ 您的活動資料已成功收到！\n\n📅 活動名稱：${eventInfo.name}\n📍 活動地點：${eventInfo.location}\n📊 主辦單位：${eventInfo.organizer}\n⏰ 開始日期：${eventInfo.startDate}\n✨ 公開設定：${showInApp ? '完全公開（將在APP顯示）' : '半公開（不在APP顯示）'}\n\n🔄 系統正在背景處理，如有進一步更新會再通知您！`;
-      
-      await sendLineMessage(eventInfo.lineUserId, {
-        type: 'text',
-        text: immediateMessage
-      });
+      // 檢查 User ID 格式（LINE User ID 通常以 U 開頭，長度約 33 字符）
+      if (eventInfo.lineUserId.startsWith('U') && eventInfo.lineUserId.length >= 30) {
+        console.log('✅ LINE User ID 格式看起來正確');
+        
+        const immediateMessage = `✅ 您的活動資料已成功收到！\n\n📅 活動名稱：${eventInfo.name}\n📍 活動地點：${eventInfo.location}\n📊 主辦單位：${eventInfo.organizer}\n⏰ 開始日期：${eventInfo.startDate}\n✨ 公開設定：${showInApp ? '完全公開（將在APP顯示）' : '半公開（不在APP顯示）'}\n\n🔄 系統正在背景處理，如有進一步更新會再通知您！`;
+        
+        console.log('準備發送的訊息:', immediateMessage);
+        
+        const sendResult = await sendLineMessage(eventInfo.lineUserId, {
+          type: 'text',
+          text: immediateMessage
+        });
+        
+        console.log('LINE 訊息發送結果:', sendResult);
+        messageSent = sendResult;
+      } else {
+        console.log('⚠️ LINE User ID 格式異常:', eventInfo.lineUserId);
+        console.log('- 是否以 U 開頭:', eventInfo.lineUserId.startsWith('U'));
+        console.log('- 長度是否足夠:', eventInfo.lineUserId.length >= 30);
+      }
+    } else {
+      console.log('未發送 LINE 訊息，原因:');
+      console.log('- Line User ID:', eventInfo.lineUserId);
+      console.log('- 是否為空:', !eventInfo.lineUserId);
+      console.log('- 是否為測試ID:', eventInfo.lineUserId === 'connection_test_123');
     }
 
     // 先回應 HTTP 請求
@@ -232,10 +260,14 @@ app.post('/webhook/form-submit', async (req, res) => {
       message: '表單處理完成',
       eventName: eventInfo.name,
       hasLineUserId: !!eventInfo.lineUserId,
+      lineUserIdLength: eventInfo.lineUserId ? eventInfo.lineUserId.length : 0,
+      lineUserIdFormat: eventInfo.lineUserId ? eventInfo.lineUserId.substring(0, 5) + '...' : 'N/A',
       willShowInApp: showInApp,
       visibility: showInApp ? '完全公開' : '半公開',
       willUpload: true,
-      immediateResponse: true
+      immediateResponse: true,
+      messageSent: messageSent,
+      hasAccessToken: !!config.channelAccessToken
     });
 
     // 異步處理自動上架
@@ -364,7 +396,42 @@ async function uploadToGoDoorWithBrowserless(eventData, showInApp = true) {
   }
 }
 
-// 手動測試上架 API
+// 新增 LINE 訊息測試端點
+app.post('/test-line-message', async (req, res) => {
+  try {
+    const { userId, message } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ error: '缺少 userId 參數' });
+    }
+    
+    console.log('測試發送 LINE 訊息...');
+    console.log('目標 User ID:', userId);
+    
+    const testMessage = message || '🧪 這是一個測試訊息，用來確認 LINE Bot 是否正常運作。';
+    
+    const result = await sendLineMessage(userId, {
+      type: 'text',
+      text: testMessage
+    });
+    
+    res.json({
+      success: result,
+      message: result ? '訊息發送成功' : '訊息發送失敗',
+      userId: userId,
+      testMessage: testMessage,
+      hasAccessToken: !!config.channelAccessToken,
+      accessTokenLength: config.channelAccessToken ? config.channelAccessToken.length : 0
+    });
+    
+  } catch (error) {
+    console.error('測試 LINE 訊息失敗:', error);
+    res.status(500).json({ 
+      error: error.message,
+      hasAccessToken: !!config.channelAccessToken
+    });
+  }
+});
 app.post('/test-upload', async (req, res) => {
   try {
     const testEventData = {
@@ -391,19 +458,29 @@ app.post('/test-upload', async (req, res) => {
   }
 });
 
-// 發送 LINE 訊息函數
+// 發送 LINE 訊息函數（增強除錯版）
 async function sendLineMessage(userId, message) {
   try {
+    console.log('=== 開始發送 LINE 訊息 ===');
+    console.log('User ID:', userId);
+    console.log('Message:', JSON.stringify(message, null, 2));
+    
     if (!config.channelAccessToken) {
+      console.error('❌ LINE Channel Access Token 未設定');
       throw new Error('LINE Channel Access Token 未設定');
     }
     
+    console.log('✅ Channel Access Token 存在，長度:', config.channelAccessToken.length);
+    
     const cleanUserId = userId.trim();
+    console.log('清理後的 User ID:', cleanUserId);
     
     const requestBody = {
       to: cleanUserId,
       messages: [message]
     };
+    
+    console.log('準備發送的請求:', JSON.stringify(requestBody, null, 2));
     
     const response = await axios.post(
       'https://api.line.me/v2/bot/message/push',
@@ -412,15 +489,39 @@ async function sendLineMessage(userId, message) {
         headers: {
           'Authorization': `Bearer ${config.channelAccessToken}`,
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 10000
       }
     );
     
-    console.log('LINE 訊息發送成功:', response.status);
+    console.log('✅ LINE 訊息發送成功');
+    console.log('回應狀態:', response.status);
+    console.log('回應資料:', response.data);
     return true;
     
   } catch (error) {
-    console.error('發送 LINE 訊息失敗:', error.response?.data || error.message);
+    console.error('❌ 發送 LINE 訊息失敗');
+    console.error('錯誤類型:', error.name);
+    console.error('錯誤訊息:', error.message);
+    
+    if (error.response) {
+      console.error('HTTP 狀態:', error.response.status);
+      console.error('錯誤詳細:', error.response.data);
+      
+      // 特別處理常見的 LINE API 錯誤
+      if (error.response.status === 400) {
+        console.error('❌ 400 錯誤：可能是 User ID 格式錯誤或訊息格式問題');
+      } else if (error.response.status === 401) {
+        console.error('❌ 401 錯誤：Channel Access Token 無效');
+      } else if (error.response.status === 403) {
+        console.error('❌ 403 錯誤：用戶可能已封鎖 Bot 或 Channel 設定問題');
+      }
+    } else if (error.request) {
+      console.error('❌ 網路錯誤，無法連接到 LINE API');
+    } else {
+      console.error('❌ 其他錯誤');
+    }
+    
     return false;
   }
 }
