@@ -46,7 +46,7 @@ app.get('/create-event', function(req, res) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GoDoor 活動建立</title>
+    <title>果多(GoDoor) 活動建立</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -264,8 +264,8 @@ app.get('/create-event', function(req, res) {
 <body>
     <div class="container">
         <div class="logo">🎉</div>
-        <h1>GoDoor 活動建立</h1>
-        <p class="subtitle">歡迎使用 GoDoor 活動建立系統！<br>填寫以下資訊，我們將自動為您處理活動上架。</p>
+        <h1>果多(GoDoor) 活動建立</h1>
+        <p class="subtitle">歡迎使用 果多(GoDoor) 活動建立系統！<br>填寫以下資訊，我們將自動為您處理活動上架。</p>
         
         <div class="features">
             <h3>✨ 服務特色</h3>
@@ -763,7 +763,7 @@ async function processEventCreation(formData, lineUserId, eventName, visibility)
         `活動名稱：${eventName}\n` +
         `曝光設定：${visibility}\n` +
         `系統已自動為您上架到果多後台，活動將在審核通過後開始顯示。\n\n` +
-        `感謝使用 GoDoor 活動建立系統！`
+        `感謝使用 果多(GoDoor)  活動建立系統！`
       );
     }
     
@@ -898,7 +898,7 @@ async function sendEventCreationForm(userId) {
       to: userId,
       messages: [{
         type: "flex",
-        altText: "GoDoor 活動建立系統",
+        altText: "果多(GoDoor)  活動建立系統",
         contents: {
           type: "bubble",
           hero: {
@@ -913,7 +913,7 @@ async function sendEventCreationForm(userId) {
             contents: [
               {
                 type: "text",
-                text: "🎉 GoDoor 活動建立",
+                text: "🎉 果多(GoDoor)  活動建立",
                 weight: "bold",
                 size: "xl"
               },
@@ -973,7 +973,7 @@ async function sendEventCreationForm(userId) {
     // 嘗試發送備用文字訊息
     try {
       console.log('嘗試發送備用文字訊息...');
-      const backupText = `👋 歡迎使用 GoDoor 活動建立系統！\n\n請點擊以下連結開始建立活動：\n${process.env.BASE_URL || 'https://godoor-line-system.onrender.com'}/create-event?userId=${userId}`;
+      const backupText = `👋 歡迎使用 果多(GoDoor)  活動建立系統！\n\n請點擊以下連結開始建立活動：\n${process.env.BASE_URL || 'https://godoor-line-system.onrender.com'}/create-event?userId=${userId}`;
       
       await sendLineMessage(userId, backupText);
       console.log('備用文字訊息發送成功');
@@ -1001,7 +1001,7 @@ async function sendQuickTestForm(userId) {
 // 發送說明訊息
 async function sendHelpMessage(userId) {
   try {
-    const message = `📋 GoDoor 活動建立系統使用說明\n\n` +
+    const message = `📋 果多(GoDoor) 活動建立系統使用說明\n\n` +
       `🎯 主要功能：\n` +
       `• 快速建立活動表單\n` +
       `• 自動上架到果多後台\n` +
@@ -1011,7 +1011,7 @@ async function sendHelpMessage(userId) {
       `• 「建立活動」- 開啟活動建立表單\n` +
       `• 「測試」- 快速測試模式\n` +
       `• 「幫助」- 顯示此說明\n\n` +
-      `需要協助請聯繫客服 📞`;
+      `需要協助請留言聯繫客服 📞`;
     
     await sendLineMessage(userId, message);
   } catch (error) {
@@ -1023,10 +1023,11 @@ async function sendHelpMessage(userId) {
 // 發送歡迎訊息
 async function sendWelcomeMessage(userId) {
   try {
-    const message = `👋 歡迎使用 GoDoor 活動建立系統！\n\n` +
-      `我可以幫您：\n` +
-      `🎉 快速建立活動\n` +
+    const message = `👋 歡迎使用 果多(GoDoor) 活動建立系統！\n\n` +
+      `我們可以幫您：\n` +
+      `🎉 快速建立活動報名網頁\n` +
       `📱 自動上架到果多APP\n` +
+      `👀 APP & 網頁報名資料同步\n` +
       `⚡ 即時通知處理結果\n\n` +
       `請輸入「建立活動」開始使用，或輸入「幫助」查看更多功能說明。`;
     
