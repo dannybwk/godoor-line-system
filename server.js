@@ -708,7 +708,7 @@ app.get('/quick-test-event', function(req, res) {
             });
         });
     </script>
-</body>
+    </body>
 </html>`;
 
   res.send(quickHtml);
@@ -795,13 +795,24 @@ async function sendLineMessage(userId, message) {
       return;
     }
     
-    const response = await axios.post('https://api.line.me/v2/bot/message/push', {
-      to: userId,
-      messages: [{
-        type: 'text',
-        text: message
-      }]
-    }, {
+    // 判斷message是字串還是物件
+    let payload;
+    if (typeof message === 'string') {
+      payload = {
+        to: userId,
+        messages: [{
+          type: 'text',
+          text: message
+        }]
+      };
+    } else {
+      // 已經是完整的訊息物件
+      payload = message;
+    }
+    
+    console.log('準備發送LINE訊息:', JSON.stringify(payload, null, 2));
+    
+    const response = await axios.post('https://api.line.me/v2/bot/message/push', payload, {
       headers: {
         'Authorization': `Bearer ${config.channelAccessToken}`,
         'Content-Type': 'application/json'
@@ -836,7 +847,18 @@ async function sendEmailNotification(formData, eventName, visibility) {
 // LINE Bot Webhook
 app.post('/webhook/line', function(req, res) {
   try {
+    // 立即回應 200 OK 以確保 LINE 平台驗證通過
+    res.status(200).send('OK');
+    
+    console.log('收到LINE webhook請求', JSON.stringify(req.body, null, 2));
+    
     const events = req.body.events;
+    
+    // 如果沒有事件或是空陣列，可能是驗證請求
+    if (!events || events.length === 0) {
+      console.log('收到空事件或驗證請求');
+      return;
+    }
     
     events.forEach(async function(event) {
       if (event.type === 'message' && event.message.type === 'text') {
@@ -857,114 +879,162 @@ app.post('/webhook/line', function(req, res) {
         }
       }
     });
-    
-    res.status(200).send('OK');
   } catch (error) {
     console.error('處理LINE webhook錯誤:', error);
-    res.status(500).send('Error');
+    // 即使有錯誤也回應 200，避免 LINE 平台重試
+    if (!res.headersSent) {
+      res.status(200).send('Error but still OK');
+    }
   }
 });
 
 // 發送活動建立表單連結
 async function sendEventCreationForm(userId) {
-  const message = {
-    type: 'flex',
-    altText: 'GoDoor 活動建立系統',
-    contents: {
-      type: 'bubble',
-      hero: {
-        type: 'image',
-        url: 'https://via.placeholder.com/320x200/667eea/ffffff?text=GoDoor',
-        size: 'full',
-        aspectRatio: '16:10'
-      },
-      body: {
-        type: 'box',
-        layout: 'vertical',
-        contents: [
-          {
-            type: 'text',
-            text: '🎉 GoDoor 活動建立',
-            weight: 'bold',
-            size: 'xl'
+  try {
+    console.log('開始準備活動建立表單訊息...');
+    
+    // 正確的 Flex Message 格式
+    const message = {
+      to: userId,
+      messages: [{
+        type: "flex",
+        altText: "GoDoor 活動建立系統",
+        contents: {
+          type: "bubble",
+          hero: {
+            type: "image",
+            url: "https://via.placeholder.com/320x200/667eea/ffffff?text=GoDoor",
+            size: "full",
+            aspectRatio: "16:10"
           },
-          {
-            type: 'text',
-            text: '輕鬆建立活動，自動上架到果多後台！',
-            size: 'sm',
-            color: '#666666',
-            margin: 'md'
-          }
-        ]
-      },
-      footer: {
-        type: 'box',
-        layout: 'vertical',
-        spacing: 'sm',
-        contents: [
-          {
-            type: 'button',
-            style: 'primary',
-            height: 'sm',
-            action: {
-              type: 'uri',
-              label: '📝 開始建立活動',
-              uri: `${process.env.BASE_URL || 'https://your-domain.com'}/create-event?userId=${userId}`
-            }
+          body: {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              {
+                type: "text",
+                text: "🎉 GoDoor 活動建立",
+                weight: "bold",
+                size: "xl"
+              },
+              {
+                type: "text",
+                text: "輕鬆建立活動，自動上架到果多後台！",
+                size: "sm",
+                color: "#666666",
+                margin: "md"
+              }
+            ]
           },
-          {
-            type: 'button',
-            style: 'secondary',
-            height: 'sm',
-            action: {
-              type: 'uri',
-              label: '🚀 快速測試',
-              uri: `${process.env.BASE_URL || 'https://your-domain.com'}/quick-test-event?userId=${userId}`
-            }
+          footer: {
+            type: "box",
+            layout: "vertical",
+            spacing: "sm",
+            contents: [
+              {
+                type: "button",
+                style: "primary",
+                height: "sm",
+                action: {
+                  type: "uri",
+                  label: "📝 開始建立活動",
+                  uri: `${process.env.BASE_URL || 'https://godoor-line-system.onrender.com'}/create-event?userId=${userId}`
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                action: {
+                  type: "uri",
+                  label: "🚀 快速測試",
+                  uri: `${process.env.BASE_URL || 'https://godoor-line-system.onrender.com'}/quick-test-event?userId=${userId}`
+                }
+              }
+            ]
           }
-        ]
+        }
+      }]
+    };
+    
+    console.log('發送 Flex 訊息...');
+    const result = await axios.post('https://api.line.me/v2/bot/message/push', message, {
+      headers: {
+        'Authorization': `Bearer ${config.channelAccessToken}`,
+        'Content-Type': 'application/json'
       }
+    });
+    
+    console.log('Flex 訊息發送成功');
+    return result.data;
+  } catch (error) {
+    console.error('發送活動建立表單失敗:', error.response?.data || error.message);
+    
+    // 嘗試發送備用文字訊息
+    try {
+      console.log('嘗試發送備用文字訊息...');
+      const backupText = `👋 歡迎使用 GoDoor 活動建立系統！\n\n請點擊以下連結開始建立活動：\n${process.env.BASE_URL || 'https://godoor-line-system.onrender.com'}/create-event?userId=${userId}`;
+      
+      await sendLineMessage(userId, backupText);
+      console.log('備用文字訊息發送成功');
+    } catch (backupError) {
+      console.error('備用文字訊息也失敗:', backupError.message);
+      throw error;
     }
-  };
-  
-  await sendLineMessage(userId, message);
+  }
 }
 
 // 發送快速測試表單
 async function sendQuickTestForm(userId) {
-  const testUrl = `${process.env.BASE_URL || 'https://your-domain.com'}/quick-test-event?userId=${userId}`;
-  const message = `🚀 快速測試模式\n\n點擊下方連結立即體驗活動建立功能：\n${testUrl}\n\n此模式提供預設範例，讓您快速了解系統操作流程。`;
-  
-  await sendLineMessage(userId, message);
+  try {
+    const baseUrl = process.env.BASE_URL || 'https://godoor-line-system.onrender.com';
+    const testUrl = `${baseUrl}/quick-test-event?userId=${userId}`;
+    const message = `🚀 快速測試模式\n\n點擊下方連結立即體驗活動建立功能：\n${testUrl}\n\n此模式提供預設範例，讓您快速了解系統操作流程。`;
+    
+    await sendLineMessage(userId, message);
+  } catch (error) {
+    console.error('發送快速測試表單失敗:', error);
+    throw error;
+  }
 }
 
 // 發送說明訊息
 async function sendHelpMessage(userId) {
-  const message = `📋 GoDoor 活動建立系統使用說明\n\n` +
-    `🎯 主要功能：\n` +
-    `• 快速建立活動表單\n` +
-    `• 自動上架到果多後台\n` +
-    `• 支援公開/半公開設定\n` +
-    `• 即時LINE通知結果\n\n` +
-    `💬 常用指令：\n` +
-    `• 「建立活動」- 開啟活動建立表單\n` +
-    `• 「測試」- 快速測試模式\n` +
-    `• 「幫助」- 顯示此說明\n\n` +
-    `需要協助請聯繫客服 📞`;
-  
-  await sendLineMessage(userId, message);
+  try {
+    const message = `📋 GoDoor 活動建立系統使用說明\n\n` +
+      `🎯 主要功能：\n` +
+      `• 快速建立活動表單\n` +
+      `• 自動上架到果多後台\n` +
+      `• 支援公開/半公開設定\n` +
+      `• 即時LINE通知結果\n\n` +
+      `💬 常用指令：\n` +
+      `• 「建立活動」- 開啟活動建立表單\n` +
+      `• 「測試」- 快速測試模式\n` +
+      `• 「幫助」- 顯示此說明\n\n` +
+      `需要協助請聯繫客服 📞`;
+    
+    await sendLineMessage(userId, message);
+  } catch (error) {
+    console.error('發送說明訊息失敗:', error);
+    throw error;
+  }
 }
 
 // 發送歡迎訊息
 async function sendWelcomeMessage(userId) {
-  const message = `👋 歡迎使用 GoDoor 活動建立系統！\n\n` +
-    `我可以幫您：\n` +
-    `🎉 快速建立活動\n` +
-    `📱 自動上架到果多APP\n` +
-    `⚡ 即時通知處理結果\n\n` +
-    `請輸入「建立活動」開始使用，或輸入「幫助」查看更多功能說明。`;
-  
-  await sendLineMessage(userId, message);
+  try {
+    const message = `👋 歡迎使用 GoDoor 活動建立系統！\n\n` +
+      `我可以幫您：\n` +
+      `🎉 快速建立活動\n` +
+      `📱 自動上架到果多APP\n` +
+      `⚡ 即時通知處理結果\n\n` +
+      `請輸入「建立活動」開始使用，或輸入「幫助」查看更多功能說明。`;
+    
+    await sendLineMessage(userId, message);
+  } catch (error) {
+    console.error('發送歡迎訊息失敗:', error);
+    throw error;
+  }
 }
 
 // 錯誤處理中間件
