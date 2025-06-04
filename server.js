@@ -342,7 +342,7 @@ app.get('/create-event', function(req, res) {
             <h4>⚠️ 重要提醒</h4>
             <p><strong>您必須擁有果多帳號</strong>，才能建立並管理活動。若尚未註冊，請先點擊下方按鈕完成註冊。</p>
             <p>若已經有果多帳號，請在表單中填寫您註冊時使用的手機號碼，以便後續管理活動。</p>
-            <button type="button" class="btn-warning" onclick="window.open('https://mg.umita.tw/event/register/903', '_blank')">註冊果多帳號</button>
+            <button type="button" class="btn-warning" onclick="window.open('https://mg.umita.tw/event/register/909', '_blank')">註冊果多帳號</button>
         </div>
         
         <div class="features">
@@ -935,7 +935,7 @@ async function sendEventCreationForm(userId) {
                 action: {
                   type: "uri",
                   label: "註冊果多帳號",
-                  uri: "https://mg.umita.tw/event/register/903"
+                  uri: "https://mg.umita.tw/event/register/909"
                 }
               }
             ]
@@ -960,7 +960,7 @@ async function sendEventCreationForm(userId) {
     // 嘗試發送備用文字訊息
     try {
       console.log('嘗試發送備用文字訊息...');
-      const backupText = `👋 歡迎使用果多(GoDoor) 活動建立系統！\n\n請確認您已註冊果多帳號，若已有帳號，請使用註冊時的手機號碼。\n\n點擊以下連結開始建立活動：\n${process.env.BASE_URL || 'https://godoor-line-system.onrender.com'}/create-event?userId=${userId}\n\n註冊果多帳號：https://mg.umita.tw/event/register/903`;
+      const backupText = `👋 歡迎使用果多(GoDoor) 活動建立系統！\n\n請確認您已註冊果多帳號，若已有帳號，請使用註冊時的手機號碼。\n\n點擊以下連結開始建立活動：\n${process.env.BASE_URL || 'https://godoor-line-system.onrender.com'}/create-event?userId=${userId}\n\n註冊果多帳號：https://mg.umita.tw/event/register/909`;
       
       await sendLineMessage(userId, backupText);
       console.log('備用文字訊息發送成功');
@@ -1160,7 +1160,7 @@ async function sendHelpMessage(userId) {
                 action: {
                   type: "uri",
                   label: "註冊果多帳號",
-                  uri: "https://mg.umita.tw/event/register/903"
+                  uri: "https://mg.umita.tw/event/register/909"
                 }
               },
               {
@@ -1202,7 +1202,7 @@ async function sendHelpMessage(userId) {
         `⚠️ 重要提醒：\n` +
         `您必須先註冊果多帳號才能建立活動\n` +
         `若已有帳號，請使用註冊時的手機號碼\n` +
-        `註冊網址：https://mg.umita.tw/event/register/903\n\n` +
+        `註冊網址：https://mg.umita.tw/event/register/909\n\n` +
         `需要協助請聯繫客服 📞`;
       
       await sendLineMessage(userId, backupText);
@@ -1365,7 +1365,7 @@ async function sendWelcomeMessage(userId) {
                 action: {
                   type: "uri",
                   label: "註冊果多帳號",
-                  uri: "https://mg.umita.tw/event/register/903"
+                  uri: "https://mg.umita.tw/event/register/909"
                 }
               },
               {
