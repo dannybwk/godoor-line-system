@@ -28,6 +28,9 @@ const goDoorConfig = {
 // 通知信箱
 const NOTIFICATION_EMAILS = ['dannyb@godoor.tw', 'godoorcs@gmail.com'];
 
+// Google Sheets Webhook URL
+const GOOGLE_SHEETS_WEBHOOK = 'https://script.google.com/macros/s/AKfycbylrKjU_eV9z9Y7quBh3q_IcJ_tcDv7SmX3ZfGKnc2m5e51uXEV-h90OaYNRG0xZrJj/exec';
+
 // 健康檢查
 app.get('/', function(req, res) {
   res.json({ 
@@ -46,7 +49,7 @@ app.get('/create-event', function(req, res) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>果多(GoDoor) 活動建立</title>
+    <title>GoDoor 活動建立</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -209,6 +212,40 @@ app.get('/create-event', function(req, res) {
             color: #666;
             text-align: center;
         }
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 8px;
+        }
+        .warning-box h4 {
+            color: #856404;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        .warning-box p {
+            color: #856404;
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .warning-box .btn-warning {
+            background: #ffc107;
+            color: #856404;
+            font-weight: bold;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-top: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        .warning-box .btn-warning:hover {
+            background: #e0a800;
+            color: #fff;
+        }
         .privacy-section {
             background: #fff3e0;
             padding: 20px;
@@ -259,13 +296,53 @@ app.get('/create-event', function(req, res) {
             color: #666;
             line-height: 1.4;
         }
+        .checkbox-group {
+            display: grid;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .checkbox-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .checkbox-option input[type="checkbox"] {
+            width: auto;
+        }
+        .success-actions {
+            display: grid;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #ddd;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            display: block;
+        }
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="logo">🎉</div>
-        <h1>果多(GoDoor) 活動建立</h1>
-        <p class="subtitle">歡迎使用 果多(GoDoor) 活動建立系統！<br>填寫以下資訊，我們將自動為您處理活動上架。</p>
+        <h1>GoDoor 活動建立</h1>
+        <p class="subtitle">歡迎使用 GoDoor 活動建立系統！<br>填寫以下資訊，我們將自動為您處理活動上架。</p>
+        
+        <div class="warning-box">
+            <h4>⚠️ 重要提醒</h4>
+            <p><strong>您必須擁有果多帳號</strong>，才能建立並管理活動。若尚未註冊，請先點擊下方按鈕完成註冊。</p>
+            <button type="button" class="btn-warning" onclick="window.open('https://www.umita.tw', '_blank')">註冊果多帳號</button>
+        </div>
         
         <div class="features">
             <h3>✨ 服務特色</h3>
@@ -305,7 +382,12 @@ app.get('/create-event', function(req, res) {
             
             <div class="form-group">
                 <label>活動描述 <span class="required">*</span></label>
-                <textarea name="description" required placeholder="請詳細描述活動內容、注意事項等資訊"></textarea>
+                <textarea name="description" required placeholder="請詳細描述活動內容、講師介紹、注意事項等任何資訊"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>講師姓名</label>
+                <input type="text" name="instructor" placeholder="講師姓名（選填）">
             </div>
             
             <div class="form-row">
@@ -354,6 +436,48 @@ app.get('/create-event', function(req, res) {
                     <label>活動費用 (元)</label>
                     <input type="number" name="price" value="0" min="0" placeholder="0 表示免費">
                 </div>
+            </div>
+            
+            <div class="form-group">
+                <label>付費方式 <span class="required">*</span></label>
+                <div class="checkbox-group">
+                    <div class="checkbox-option">
+                        <input type="checkbox" name="paymentMethod" value="免費活動不需繳費" id="payment-free" checked>
+                        <label for="payment-free">免費活動不需繳費</label>
+                    </div>
+                    <div class="checkbox-option">
+                        <input type="checkbox" name="paymentMethod" value="現場繳費" id="payment-onsite">
+                        <label for="payment-onsite">現場繳費</label>
+                    </div>
+                    <div class="checkbox-option">
+                        <input type="checkbox" name="paymentMethod" value="事先匯款" id="payment-bank">
+                        <label for="payment-bank">事先匯款</label>
+                    </div>
+                    <div class="checkbox-option">
+                        <input type="checkbox" name="paymentMethod" value="線上刷卡(暫未開放)" id="payment-credit" disabled>
+                        <label for="payment-credit" style="color:#999">線上刷卡(暫未開放)</label>
+                    </div>
+                    <div class="checkbox-option">
+                        <input type="checkbox" name="paymentMethod" value="LINE PAY(暫未開放)" id="payment-line" disabled>
+                        <label for="payment-line" style="color:#999">LINE PAY(暫未開放)</label>
+                    </div>
+                    <div class="checkbox-option">
+                        <input type="checkbox" name="paymentMethod" value="街口支付(暫未開放)" id="payment-jkopay" disabled>
+                        <label for="payment-jkopay" style="color:#999">街口支付(暫未開放)</label>
+                    </div>
+                    <div class="checkbox-option">
+                        <input type="checkbox" name="paymentMethod" value="超商繳費(暫未開放)" id="payment-cvs" disabled>
+                        <label for="payment-cvs" style="color:#999">超商繳費(暫未開放)</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>是否開放到現場候補</label>
+                <select name="waitlist">
+                    <option value="是">是</option>
+                    <option value="否">否</option>
+                </select>
             </div>
             
             <div class="form-row">
@@ -414,6 +538,17 @@ app.get('/create-event', function(req, res) {
             // 預設選擇公開
             document.getElementById('public').checked = true;
             selectRadio('public');
+            
+            // 費用與付費方式聯動
+            document.querySelector('input[name="price"]').addEventListener('change', function() {
+                var isFree = parseInt(this.value) === 0;
+                document.getElementById('payment-free').checked = isFree;
+                document.getElementById('payment-free').disabled = !isFree;
+                
+                if (!isFree && !document.getElementById('payment-onsite').checked && !document.getElementById('payment-bank').checked) {
+                    document.getElementById('payment-onsite').checked = true;
+                }
+            });
         };
         
         // 處理單選按鈕選擇
@@ -434,6 +569,16 @@ app.get('/create-event', function(req, res) {
             }
         });
         
+        // 收集付費方式
+        function collectPaymentMethods() {
+            var checkboxes = document.querySelectorAll('input[name="paymentMethod"]:checked');
+            var values = [];
+            checkboxes.forEach(function(checkbox) {
+                values.push(checkbox.value);
+            });
+            return values.join(', ');
+        }
+        
         // 表單提交處理
         document.getElementById('eventForm').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -450,13 +595,16 @@ app.get('/create-event', function(req, res) {
             var formData = new FormData(this);
             var data = {};
             formData.forEach(function(value, key) {
-                data[key] = value;
+                if (key !== 'paymentMethod') { // 排除付費方式，後面會特別處理
+                    data[key] = value;
+                }
             });
             
             // 轉換為後端期望的格式
             var eventData = {
                 '活動名稱': data.activityName,
                 '活動內容或備註（請盡量詳盡）': data.description,
+                '講師姓名': data.instructor || '',
                 '活動開始日期': data.startDate,
                 '活動開始時間': data.startTime,
                 '活動結束日期': data.endDate || data.startDate,
@@ -466,6 +614,8 @@ app.get('/create-event', function(req, res) {
                 '活動主辦人或單位': data.organizer,
                 '活動人數上限': data.maxParticipants || '30',
                 '活動費用': data.price || '0',
+                '付費方式': collectPaymentMethods(),
+                '是否開放到現場候補': data.waitlist || '是',
                 '聯絡電話': data.phone || '',
                 '聯絡Email': data.email || '',
                 'LINE使用者ID（系統自動填寫，請保留我們才能通知您哦）': data.lineUserId,
@@ -485,13 +635,12 @@ app.get('/create-event', function(req, res) {
             .then(function(result) {
                 if (result.success) {
                     status.className = 'status success';
-                    status.textContent = '✅ 活動「' + result.eventName + '」建立成功！(' + result.visibility + ') 系統已開始處理，您將透過LINE收到處理結果通知。';
+                    status.innerHTML = '✅ 活動「' + result.eventName + '」建立成功！(' + result.visibility + ') 系統已開始處理，您將透過LINE收到處理結果通知。' +
+                    '<div class="success-actions">' +
+                    '<a href="https://line.me/R/ti/p/@535xsmpo" class="btn-secondary">👈 回到果多LINE</a>' +
+                    '</div>';
                     submitBtn.textContent = '✅ 建立完成';
-                    
-                    // 5秒後重置表單
-                    setTimeout(function() {
-                        window.location.reload();
-                    }, 5000);
+                    submitBtn.disabled = true;
                 } else {
                     throw new Error(result.message || '建立失敗');
                 }
@@ -509,209 +658,6 @@ app.get('/create-event', function(req, res) {
 </html>`;
 
   res.send(htmlContent);
-});
-
-// 測試用快速建立活動頁面
-app.get('/quick-test-event', function(req, res) {
-  const userId = req.query.userId || '';
-  
-  const quickHtml = `<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>快速測試 - 建立活動</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
-            min-height: 100vh;
-        }
-        .container {
-            background: white;
-            border-radius: 16px;
-            padding: 32px;
-            max-width: 500px;
-            margin: 0 auto;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        .logo { font-size: 48px; margin-bottom: 16px; text-align: center; }
-        h1 { color: #333; margin-bottom: 16px; text-align: center; }
-        .test-badge {
-            background: #ff6b6b;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            display: inline-block;
-            margin-bottom: 20px;
-        }
-        .quick-form { display: grid; gap: 15px; }
-        label { font-weight: bold; color: #333; margin-bottom: 5px; display: block; }
-        input, select, textarea {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-            box-sizing: border-box;
-        }
-        .btn {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .preset-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .preset-btn {
-            background: #f8f9fa;
-            border: 2px solid #ddd;
-            padding: 10px;
-            border-radius: 8px;
-            cursor: pointer;
-            text-align: center;
-            font-size: 12px;
-        }
-        .status { margin-top: 15px; padding: 12px; border-radius: 8px; font-size: 14px; display: none; }
-        .status.loading { background: #e3f2fd; color: #1976d2; display: block; }
-        .status.success { background: #e8f5e8; color: #2e7d32; display: block; }
-        .status.error { background: #ffebee; color: #c62828; display: block; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="logo">🚀</div>
-        <h1>快速測試建立活動</h1>
-        <div class="test-badge">🧪 測試模式</div>
-        
-        <div class="preset-btns">
-            <div class="preset-btn" onclick="fillPreset('workshop')">🎨 工作坊範例</div>
-            <div class="preset-btn" onclick="fillPreset('seminar')">📚 講座範例</div>
-            <div class="preset-btn" onclick="fillPreset('social')">🎉 社交活動範例</div>
-            <div class="preset-btn" onclick="fillPreset('sports')">⚽ 運動活動範例</div>
-        </div>
-        
-        <form id="quickForm" class="quick-form">
-            <div><label>活動名稱</label><input type="text" name="activityName" required></div>
-            <div><label>活動描述</label><textarea name="description" rows="3"></textarea></div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div><label>開始日期</label><input type="date" name="startDate" required></div>
-                <div><label>開始時間</label><input type="time" name="startTime" required></div>
-            </div>
-            <div><label>活動地點</label><input type="text" name="location" required></div>
-            <div><label>主辦單位</label><input type="text" name="organizer" required></div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div><label>人數上限</label><input type="number" name="maxParticipants" value="30" min="1"></div>
-                <div><label>活動費用</label><input type="number" name="price" value="0" min="0"></div>
-            </div>
-            <div>
-                <label>公開設定</label>
-                <select name="publicity">
-                    <option value="public">完全公開（在APP顯示）</option>
-                    <option value="private">半公開（不在APP顯示）</option>
-                </select>
-            </div>
-            <input type="hidden" name="lineUserId" value="${userId}">
-            <button type="submit" class="btn" id="submitBtn">🚀 快速建立測試活動</button>
-        </form>
-        
-        <div id="status" class="status"></div>
-    </div>
-
-    <script>
-        var presets = {
-            workshop: { activityName: 'AI 程式設計工作坊', description: '學習如何使用 AI 工具提升程式開發效率，適合初學者參加', location: '台北市信義區信義路五段7號', organizer: 'TechHub Taiwan', maxParticipants: 25, price: 1500 },
-            seminar: { activityName: '數位轉型趨勢講座', description: '探討 2025 年企業數位轉型的最新趨勢與實務案例分享', location: '台北市中山區南京東路二段', organizer: '數位創新協會', maxParticipants: 80, price: 0 },
-            social: { activityName: '週末咖啡聚會', description: '輕鬆的週末聚會，認識新朋友，分享生活趣事', location: '台北市大安區敦化南路一段', organizer: '咖啡愛好者社群', maxParticipants: 15, price: 200 },
-            sports: { activityName: '週日羽球練習', description: '歡迎各程度球友參加，一起運動流汗增進球技', location: '台北市松山區體育館', organizer: '羽球同好會', maxParticipants: 12, price: 100 }
-        };
-        
-        window.onload = function() {
-            var tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            document.querySelector('input[name="startDate"]').value = tomorrow.toISOString().split('T')[0];
-            document.querySelector('input[name="startTime"]').value = '14:00';
-        };
-        
-        function fillPreset(type) {
-            var preset = presets[type];
-            var form = document.getElementById('quickForm');
-            Object.keys(preset).forEach(function(key) {
-                var input = form.querySelector('[name="' + key + '"]');
-                if (input) input.value = preset[key];
-            });
-        }
-        
-        document.getElementById('quickForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            var submitBtn = document.getElementById('submitBtn');
-            var status = document.getElementById('status');
-            
-            submitBtn.disabled = true;
-            submitBtn.textContent = '⏳ 建立中...';
-            status.className = 'status loading';
-            status.textContent = '正在快速建立測試活動...';
-            
-            var formData = new FormData(this);
-            var data = {};
-            formData.forEach(function(value, key) { data[key] = value; });
-            
-            var eventData = {
-                '活動名稱': data.activityName,
-                '活動內容或備註（請盡量詳盡）': data.description,
-                '活動開始日期': data.startDate,
-                '活動開始時間': data.startTime,
-                '活動結束日期': data.startDate,
-                '活動結束時間': '18:00',
-                '活動地點': data.location,
-                '活動主辦人或單位': data.organizer,
-                '活動人數上限': data.maxParticipants,
-                '活動費用': data.price,
-                'LINE使用者ID（系統自動填寫，請保留我們才能通知您哦）': data.lineUserId,
-                '要將活動公開曝光到果多APP上嗎？': data.publicity === 'public' ? '要（推薦到果多APP）' : '不要'
-            };
-            
-            fetch('/webhook/form-submit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(eventData)
-            })
-            .then(function(response) { return response.json(); })
-            .then(function(result) {
-                if (result.success) {
-                    status.className = 'status success';
-                    status.textContent = '✅ 測試活動「' + result.eventName + '」建立成功！(' + result.visibility + ')';
-                    submitBtn.textContent = '✅ 建立完成';
-                    setTimeout(function() {
-                        document.getElementById('quickForm').reset();
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = '🚀 快速建立測試活動';
-                        status.className = 'status';
-                        status.style.display = 'none';
-                    }, 3000);
-                } else {
-                    throw new Error(result.message || '建立失敗');
-                }
-            })
-            .catch(function(error) {
-                console.error('建立測試活動失敗:', error);
-                status.className = 'status error';
-                status.textContent = '❌ 建立失敗: ' + error.message;
-                submitBtn.disabled = false;
-                submitBtn.textContent = '🚀 快速建立測試活動';
-            });
-        });
-    </script>
-    </body>
-</html>`;
-
-  res.send(quickHtml);
 });
 
 // Webhook 處理表單提交
@@ -733,6 +679,14 @@ app.post('/webhook/form-submit', async function(req, res) {
       message: '活動建立請求已接收，正在處理中...'
     });
     
+    // 發送數據到 Google Sheets
+    try {
+      await sendToGoogleSheets(formData);
+    } catch (sheetError) {
+      console.error('發送到 Google Sheets 失敗:', sheetError);
+      // 繼續處理，不中斷流程
+    }
+    
     // 異步處理活動建立
     processEventCreation(formData, lineUserId, eventName, visibility);
     
@@ -744,6 +698,25 @@ app.post('/webhook/form-submit', async function(req, res) {
     });
   }
 });
+
+// 發送數據到 Google Sheets
+async function sendToGoogleSheets(formData) {
+  try {
+    console.log('開始發送數據到 Google Sheets...');
+    
+    const response = await axios.post(GOOGLE_SHEETS_WEBHOOK, formData, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    console.log('Google Sheets 回應:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('發送到 Google Sheets 錯誤:', error.response?.data || error.message);
+    throw error;
+  }
+}
 
 // 異步處理活動建立
 async function processEventCreation(formData, lineUserId, eventName, visibility) {
@@ -763,7 +736,7 @@ async function processEventCreation(formData, lineUserId, eventName, visibility)
         `活動名稱：${eventName}\n` +
         `曝光設定：${visibility}\n` +
         `系統已自動為您上架到果多後台，活動將在審核通過後開始顯示。\n\n` +
-        `感謝使用 果多(GoDoor)  活動建立系統！`
+        `感謝使用 GoDoor 活動建立系統！`
       );
     }
     
@@ -870,8 +843,6 @@ app.post('/webhook/line', function(req, res) {
         // 處理不同的指令
         if (messageText.includes('建立活動') || messageText.includes('創建活動')) {
           await sendEventCreationForm(userId);
-        } else if (messageText.includes('測試') || messageText.includes('demo')) {
-          await sendQuickTestForm(userId);
         } else if (messageText.includes('幫助') || messageText.includes('說明')) {
           await sendHelpMessage(userId);
         } else {
@@ -898,7 +869,7 @@ async function sendEventCreationForm(userId) {
       to: userId,
       messages: [{
         type: "flex",
-        altText: "果多(GoDoor)  活動建立系統",
+        altText: "GoDoor 活動建立系統",
         contents: {
           type: "bubble",
           hero: {
@@ -913,7 +884,7 @@ async function sendEventCreationForm(userId) {
             contents: [
               {
                 type: "text",
-                text: "🎉 果多(GoDoor)  活動建立",
+                text: "🎉 GoDoor 活動建立",
                 weight: "bold",
                 size: "xl"
               },
@@ -923,6 +894,14 @@ async function sendEventCreationForm(userId) {
                 size: "sm",
                 color: "#666666",
                 margin: "md"
+              },
+              {
+                type: "text",
+                text: "請先確認您已註冊果多帳號",
+                size: "xs",
+                color: "#e74c3c",
+                margin: "lg",
+                weight: "bold"
               }
             ]
           },
@@ -947,8 +926,8 @@ async function sendEventCreationForm(userId) {
                 height: "sm",
                 action: {
                   type: "uri",
-                  label: "🚀 快速測試",
-                  uri: `${process.env.BASE_URL || 'https://godoor-line-system.onrender.com'}/quick-test-event?userId=${userId}`
+                  label: "註冊果多帳號",
+                  uri: "https://www.umita.tw"
                 }
               }
             ]
@@ -973,7 +952,7 @@ async function sendEventCreationForm(userId) {
     // 嘗試發送備用文字訊息
     try {
       console.log('嘗試發送備用文字訊息...');
-      const backupText = `👋 歡迎使用 果多(GoDoor)  活動建立系統！\n\n請點擊以下連結開始建立活動：\n${process.env.BASE_URL || 'https://godoor-line-system.onrender.com'}/create-event?userId=${userId}`;
+      const backupText = `👋 歡迎使用 GoDoor 活動建立系統！\n\n請確認您已註冊果多帳號，然後點擊以下連結開始建立活動：\n${process.env.BASE_URL || 'https://godoor-line-system.onrender.com'}/create-event?userId=${userId}\n\n註冊果多帳號：https://www.umita.tw`;
       
       await sendLineMessage(userId, backupText);
       console.log('備用文字訊息發送成功');
@@ -984,24 +963,10 @@ async function sendEventCreationForm(userId) {
   }
 }
 
-// 發送快速測試表單
-async function sendQuickTestForm(userId) {
-  try {
-    const baseUrl = process.env.BASE_URL || 'https://godoor-line-system.onrender.com';
-    const testUrl = `${baseUrl}/quick-test-event?userId=${userId}`;
-    const message = `🚀 快速測試模式\n\n點擊下方連結立即體驗活動建立功能：\n${testUrl}\n\n此模式提供預設範例，讓您快速了解系統操作流程。`;
-    
-    await sendLineMessage(userId, message);
-  } catch (error) {
-    console.error('發送快速測試表單失敗:', error);
-    throw error;
-  }
-}
-
 // 發送說明訊息
 async function sendHelpMessage(userId) {
   try {
-    const message = `📋 果多(GoDoor) 活動建立系統使用說明\n\n` +
+    const message = `📋 GoDoor 活動建立系統使用說明\n\n` +
       `🎯 主要功能：\n` +
       `• 快速建立活動表單\n` +
       `• 自動上架到果多後台\n` +
@@ -1009,9 +974,11 @@ async function sendHelpMessage(userId) {
       `• 即時LINE通知結果\n\n` +
       `💬 常用指令：\n` +
       `• 「建立活動」- 開啟活動建立表單\n` +
-      `• 「測試」- 快速測試模式\n` +
       `• 「幫助」- 顯示此說明\n\n` +
-      `需要協助請留言聯繫客服 📞`;
+      `⚠️ 重要提醒：\n` +
+      `您必須先註冊果多帳號才能建立活動\n` +
+      `註冊網址：https://www.umita.tw\n\n` +
+      `需要協助請聯繫客服 📞`;
     
     await sendLineMessage(userId, message);
   } catch (error) {
@@ -1023,12 +990,12 @@ async function sendHelpMessage(userId) {
 // 發送歡迎訊息
 async function sendWelcomeMessage(userId) {
   try {
-    const message = `👋 歡迎使用 果多(GoDoor) 活動建立系統！\n\n` +
-      `我們可以幫您：\n` +
-      `🎉 快速建立活動報名網頁\n` +
+    const message = `👋 歡迎使用 GoDoor 活動建立系統！\n\n` +
+      `我可以幫您：\n` +
+      `🎉 快速建立活動\n` +
       `📱 自動上架到果多APP\n` +
-      `👀 APP & 網頁報名資料同步\n` +
       `⚡ 即時通知處理結果\n\n` +
+      `⚠️ 請確認您已註冊果多帳號\n\n` +
       `請輸入「建立活動」開始使用，或輸入「幫助」查看更多功能說明。`;
     
     await sendLineMessage(userId, message);
@@ -1062,7 +1029,6 @@ app.listen(PORT, function() {
   console.log(`📡 服務運行在 port ${PORT}`);
   console.log(`🌐 健康檢查: http://localhost:${PORT}/`);
   console.log(`📝 活動建立: http://localhost:${PORT}/create-event`);
-  console.log(`🧪 快速測試: http://localhost:${PORT}/quick-test-event`);
 });
 
 module.exports = app;
