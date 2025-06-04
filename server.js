@@ -35,7 +35,7 @@ const GOOGLE_SHEETS_WEBHOOK = 'https://script.google.com/macros/s/AKfycbylrKjU_e
 app.get('/', function(req, res) {
   res.json({ 
     status: 'OK', 
-    message: 'GoDoor LINE System is running!',
+    message: '果多(GoDoor) LINE System is running!',
     timestamp: new Date().toISOString()
   });
 });
@@ -49,7 +49,7 @@ app.get('/create-event', function(req, res) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GoDoor 活動建立</title>
+    <title>果多(GoDoor) 活動建立</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -226,7 +226,7 @@ app.get('/create-event', function(req, res) {
         }
         .warning-box p {
             color: #856404;
-            margin: 0;
+            margin: 0 0 10px 0;
             font-size: 14px;
             line-height: 1.5;
         }
@@ -335,13 +335,14 @@ app.get('/create-event', function(req, res) {
 <body>
     <div class="container">
         <div class="logo">🎉</div>
-        <h1>GoDoor 活動建立</h1>
-        <p class="subtitle">歡迎使用 GoDoor 活動建立系統！<br>填寫以下資訊，我們將自動為您處理活動上架。</p>
+        <h1>果多(GoDoor) 活動建立</h1>
+        <p class="subtitle">歡迎使用果多(GoDoor) 活動建立系統！<br>填寫以下資訊，我們將自動為您處理活動上架。</p>
         
         <div class="warning-box">
             <h4>⚠️ 重要提醒</h4>
             <p><strong>您必須擁有果多帳號</strong>，才能建立並管理活動。若尚未註冊，請先點擊下方按鈕完成註冊。</p>
-            <button type="button" class="btn-warning" onclick="window.open('https://www.umita.tw', '_blank')">註冊果多帳號</button>
+            <p>若已經有果多帳號，請在表單中填寫您註冊時使用的手機號碼，以便後續管理活動。</p>
+            <button type="button" class="btn-warning" onclick="window.open('https://mg.umita.tw/event/register/903', '_blank')">註冊果多帳號</button>
         </div>
         
         <div class="features">
@@ -475,8 +476,8 @@ app.get('/create-event', function(req, res) {
             <div class="form-group">
                 <label>是否開放到現場候補</label>
                 <select name="waitlist">
-                    <option value="是">是</option>
                     <option value="否">否</option>
+                    <option value="是">是</option>
                 </select>
             </div>
             
@@ -615,7 +616,7 @@ app.get('/create-event', function(req, res) {
                 '活動人數上限': data.maxParticipants || '30',
                 '活動費用': data.price || '0',
                 '付費方式': collectPaymentMethods(),
-                '是否開放到現場候補': data.waitlist || '是',
+                '是否開放到現場候補': data.waitlist || '否',
                 '聯絡電話': data.phone || '',
                 '聯絡Email': data.email || '',
                 'LINE使用者ID（系統自動填寫，請保留我們才能通知您哦）': data.lineUserId,
@@ -736,7 +737,7 @@ async function processEventCreation(formData, lineUserId, eventName, visibility)
         `活動名稱：${eventName}\n` +
         `曝光設定：${visibility}\n` +
         `系統已自動為您上架到果多後台，活動將在審核通過後開始顯示。\n\n` +
-        `感謝使用 GoDoor 活動建立系統！`
+        `感謝使用果多(GoDoor) 活動建立系統！`
       );
     }
     
@@ -869,7 +870,7 @@ async function sendEventCreationForm(userId) {
       to: userId,
       messages: [{
         type: "flex",
-        altText: "GoDoor 活動建立系統",
+        altText: "果多(GoDoor) 活動建立系統",
         contents: {
           type: "bubble",
           hero: {
@@ -884,7 +885,7 @@ async function sendEventCreationForm(userId) {
             contents: [
               {
                 type: "text",
-                text: "🎉 GoDoor 活動建立",
+                text: "🎉 果多(GoDoor) 活動建立",
                 weight: "bold",
                 size: "xl"
               },
@@ -900,7 +901,14 @@ async function sendEventCreationForm(userId) {
                 text: "請先確認您已註冊果多帳號",
                 size: "xs",
                 color: "#e74c3c",
-                margin: "lg",
+                margin: "md",
+                weight: "bold"
+              },
+              {
+                type: "text",
+                text: "若已有帳號，請使用註冊時的手機號碼",
+                size: "xs",
+                color: "#e74c3c",
                 weight: "bold"
               }
             ]
@@ -927,7 +935,7 @@ async function sendEventCreationForm(userId) {
                 action: {
                   type: "uri",
                   label: "註冊果多帳號",
-                  uri: "https://www.umita.tw"
+                  uri: "https://mg.umita.tw/event/register/903"
                 }
               }
             ]
@@ -952,7 +960,7 @@ async function sendEventCreationForm(userId) {
     // 嘗試發送備用文字訊息
     try {
       console.log('嘗試發送備用文字訊息...');
-      const backupText = `👋 歡迎使用 GoDoor 活動建立系統！\n\n請確認您已註冊果多帳號，然後點擊以下連結開始建立活動：\n${process.env.BASE_URL || 'https://godoor-line-system.onrender.com'}/create-event?userId=${userId}\n\n註冊果多帳號：https://www.umita.tw`;
+      const backupText = `👋 歡迎使用果多(GoDoor) 活動建立系統！\n\n請確認您已註冊果多帳號，若已有帳號，請使用註冊時的手機號碼。\n\n點擊以下連結開始建立活動：\n${process.env.BASE_URL || 'https://godoor-line-system.onrender.com'}/create-event?userId=${userId}\n\n註冊果多帳號：https://mg.umita.tw/event/register/903`;
       
       await sendLineMessage(userId, backupText);
       console.log('備用文字訊息發送成功');
@@ -966,42 +974,436 @@ async function sendEventCreationForm(userId) {
 // 發送說明訊息
 async function sendHelpMessage(userId) {
   try {
-    const message = `📋 GoDoor 活動建立系統使用說明\n\n` +
-      `🎯 主要功能：\n` +
-      `• 快速建立活動表單\n` +
-      `• 自動上架到果多後台\n` +
-      `• 支援公開/半公開設定\n` +
-      `• 即時LINE通知結果\n\n` +
-      `💬 常用指令：\n` +
-      `• 「建立活動」- 開啟活動建立表單\n` +
-      `• 「幫助」- 顯示此說明\n\n` +
-      `⚠️ 重要提醒：\n` +
-      `您必須先註冊果多帳號才能建立活動\n` +
-      `註冊網址：https://www.umita.tw\n\n` +
-      `需要協助請聯繫客服 📞`;
+    const message = {
+      to: userId,
+      messages: [{
+        type: "flex",
+        altText: "果多(GoDoor) 活動建立系統使用說明",
+        contents: {
+          type: "bubble",
+          body: {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              {
+                type: "text",
+                text: "📋 果多(GoDoor) 活動建立系統",
+                weight: "bold",
+                size: "lg",
+                color: "#1DB446",
+                align: "center"
+              },
+              {
+                type: "text",
+                text: "使用說明",
+                size: "sm",
+                color: "#aaaaaa",
+                align: "center",
+                margin: "md"
+              },
+              {
+                type: "separator",
+                margin: "xxl"
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                margin: "xxl",
+                spacing: "sm",
+                contents: [
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    contents: [
+                      {
+                        type: "text",
+                        text: "🎯",
+                        size: "sm",
+                        flex: 1
+                      },
+                      {
+                        type: "text",
+                        text: "主要功能",
+                        weight: "bold",
+                        size: "sm",
+                        flex: 9
+                      }
+                    ]
+                  },
+                  {
+                    type: "box",
+                    layout: "vertical",
+                    margin: "md",
+                    spacing: "sm",
+                    contents: [
+                      {
+                        type: "text",
+                        text: "• 快速建立活動表單",
+                        size: "xs",
+                        color: "#555555",
+                        wrap: true
+                      },
+                      {
+                        type: "text",
+                        text: "• 自動上架到果多後台",
+                        size: "xs",
+                        color: "#555555",
+                        wrap: true
+                      },
+                      {
+                        type: "text",
+                        text: "• 支援公開/半公開設定",
+                        size: "xs",
+                        color: "#555555",
+                        wrap: true
+                      },
+                      {
+                        type: "text",
+                        text: "• 即時LINE通知結果",
+                        size: "xs",
+                        color: "#555555",
+                        wrap: true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                type: "separator",
+                margin: "xxl"
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                margin: "xxl",
+                spacing: "sm",
+                contents: [
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    contents: [
+                      {
+                        type: "text",
+                        text: "💬",
+                        size: "sm",
+                        flex: 1
+                      },
+                      {
+                        type: "text",
+                        text: "常用指令",
+                        weight: "bold",
+                        size: "sm",
+                        flex: 9
+                      }
+                    ]
+                  },
+                  {
+                    type: "box",
+                    layout: "vertical",
+                    margin: "md",
+                    spacing: "sm",
+                    contents: [
+                      {
+                        type: "text",
+                        text: "• 「建立活動」- 開啟活動建立表單",
+                        size: "xs",
+                        color: "#555555"
+                      },
+                      {
+                        type: "text",
+                        text: "• 「幫助」- 顯示此說明",
+                        size: "xs",
+                        color: "#555555"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                type: "separator",
+                margin: "xxl"
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                margin: "xxl",
+                spacing: "sm",
+                contents: [
+                  {
+                    type: "text",
+                    text: "⚠️ 重要提醒",
+                    weight: "bold",
+                    color: "#e74c3c",
+                    size: "sm"
+                  },
+                  {
+                    type: "text",
+                    text: "您必須先註冊果多帳號才能建立活動。若已有帳號，請使用註冊時的手機號碼。",
+                    wrap: true,
+                    size: "xs",
+                    margin: "md",
+                    color: "#555555"
+                  }
+                ]
+              }
+            ]
+          },
+          footer: {
+            type: "box",
+            layout: "vertical",
+            spacing: "sm",
+            contents: [
+              {
+                type: "button",
+                style: "primary",
+                height: "sm",
+                action: {
+                  type: "uri",
+                  label: "註冊果多帳號",
+                  uri: "https://mg.umita.tw/event/register/903"
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                action: {
+                  type: "message",
+                  label: "建立活動",
+                  text: "建立活動"
+                }
+              },
+              {
+                type: "spacer",
+                size: "sm"
+              }
+            ],
+            flex: 0
+          }
+        }
+      }]
+    };
     
     await sendLineMessage(userId, message);
   } catch (error) {
     console.error('發送說明訊息失敗:', error);
-    throw error;
+    
+    // 發送備用文字訊息
+    try {
+      const backupText = `📋 果多(GoDoor) 活動建立系統使用說明\n\n` +
+        `🎯 主要功能：\n` +
+        `• 快速建立活動表單\n` +
+        `• 自動上架到果多後台\n` +
+        `• 支援公開/半公開設定\n` +
+        `• 即時LINE通知結果\n\n` +
+        `💬 常用指令：\n` +
+        `• 「建立活動」- 開啟活動建立表單\n` +
+        `• 「幫助」- 顯示此說明\n\n` +
+        `⚠️ 重要提醒：\n` +
+        `您必須先註冊果多帳號才能建立活動\n` +
+        `若已有帳號，請使用註冊時的手機號碼\n` +
+        `註冊網址：https://mg.umita.tw/event/register/903\n\n` +
+        `需要協助請聯繫客服 📞`;
+      
+      await sendLineMessage(userId, backupText);
+    } catch (backupError) {
+      console.error('備用文字訊息也失敗:', backupError.message);
+      throw error;
+    }
   }
 }
 
 // 發送歡迎訊息
 async function sendWelcomeMessage(userId) {
   try {
-    const message = `👋 歡迎使用 GoDoor 活動建立系統！\n\n` +
-      `我可以幫您：\n` +
-      `🎉 快速建立活動\n` +
-      `📱 自動上架到果多APP\n` +
-      `⚡ 即時通知處理結果\n\n` +
-      `⚠️ 請確認您已註冊果多帳號\n\n` +
-      `請輸入「建立活動」開始使用，或輸入「幫助」查看更多功能說明。`;
+    const message = {
+      to: userId,
+      messages: [{
+        type: "flex",
+        altText: "歡迎使用果多(GoDoor) 活動建立系統",
+        contents: {
+          type: "bubble",
+          hero: {
+            type: "image",
+            url: "https://via.placeholder.com/320x200/667eea/ffffff?text=GoDoor",
+            size: "full",
+            aspectRatio: "16:10"
+          },
+          body: {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              {
+                type: "text",
+                text: "👋 歡迎使用",
+                weight: "bold",
+                size: "xl"
+              },
+              {
+                type: "text",
+                text: "果多(GoDoor) 活動建立系統",
+                weight: "bold",
+                size: "xl",
+                margin: "sm"
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                margin: "lg",
+                spacing: "sm",
+                contents: [
+                  {
+                    type: "box",
+                    layout: "baseline",
+                    spacing: "sm",
+                    contents: [
+                      {
+                        type: "text",
+                        text: "🎉",
+                        size: "sm",
+                        flex: 1
+                      },
+                      {
+                        type: "text",
+                        text: "快速建立活動",
+                        wrap: true,
+                        color: "#666666",
+                        size: "sm",
+                        flex: 5
+                      }
+                    ]
+                  },
+                  {
+                    type: "box",
+                    layout: "baseline",
+                    spacing: "sm",
+                    contents: [
+                      {
+                        type: "text",
+                        text: "📱",
+                        size: "sm",
+                        flex: 1
+                      },
+                      {
+                        type: "text",
+                        text: "自動上架到果多APP",
+                        wrap: true,
+                        color: "#666666",
+                        size: "sm",
+                        flex: 5
+                      }
+                    ]
+                  },
+                  {
+                    type: "box",
+                    layout: "baseline",
+                    spacing: "sm",
+                    contents: [
+                      {
+                        type: "text",
+                        text: "⚡",
+                        size: "sm",
+                        flex: 1
+                      },
+                      {
+                        type: "text",
+                        text: "即時通知處理結果",
+                        wrap: true,
+                        color: "#666666",
+                        size: "sm",
+                        flex: 5
+                      }
+                    ]
+                  },
+                  {
+                    type: "box",
+                    layout: "baseline",
+                    spacing: "sm",
+                    margin: "md",
+                    contents: [
+                      {
+                        type: "text",
+                        text: "⚠️",
+                        size: "sm",
+                        flex: 1,
+                        color: "#e74c3c"
+                      },
+                      {
+                        type: "text",
+                        text: "請先註冊果多帳號，若已有帳號，請使用註冊時的手機號碼。",
+                        wrap: true,
+                        color: "#e74c3c",
+                        size: "xs",
+                        flex: 5,
+                        weight: "bold"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          footer: {
+            type: "box",
+            layout: "vertical",
+            spacing: "sm",
+            contents: [
+              {
+                type: "button",
+                style: "primary",
+                height: "sm",
+                action: {
+                  type: "message",
+                  label: "建立活動",
+                  text: "建立活動"
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                action: {
+                  type: "uri",
+                  label: "註冊果多帳號",
+                  uri: "https://mg.umita.tw/event/register/903"
+                }
+              },
+              {
+                type: "button",
+                style: "link",
+                height: "sm",
+                action: {
+                  type: "message",
+                  label: "查看說明",
+                  text: "幫助"
+                }
+              }
+            ]
+          }
+        }
+      }]
+    };
     
     await sendLineMessage(userId, message);
   } catch (error) {
     console.error('發送歡迎訊息失敗:', error);
-    throw error;
+    
+    // 發送備用文字訊息
+    try {
+      const backupText = `👋 歡迎使用果多(GoDoor) 活動建立系統！\n\n` +
+        `我可以幫您：\n` +
+        `🎉 快速建立活動\n` +
+        `📱 自動上架到果多APP\n` +
+        `⚡ 即時通知處理結果\n\n` +
+        `⚠️ 重要提醒：\n` +
+        `請先註冊果多帳號，若已有帳號，請使用註冊時的手機號碼。\n\n` +
+        `請輸入「建立活動」開始使用，或輸入「幫助」查看更多功能說明。`;
+      
+      await sendLineMessage(userId, backupText);
+    } catch (backupError) {
+      console.error('備用文字訊息也失敗:', backupError.message);
+      throw error;
+    }
   }
 }
 
@@ -1025,7 +1427,7 @@ app.use(function(req, res) {
 // 啟動服務器
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, function() {
-  console.log(`🚀 GoDoor LINE System 啟動成功！`);
+  console.log(`🚀 果多(GoDoor) LINE System 啟動成功！`);
   console.log(`📡 服務運行在 port ${PORT}`);
   console.log(`🌐 健康檢查: http://localhost:${PORT}/`);
   console.log(`📝 活動建立: http://localhost:${PORT}/create-event`);
