@@ -1,0 +1,6 @@
+// config.js.template
+
+const CONFIG = {
+  LIFF_ID: 'YOUR_LIFF_ID_HERE',
+  API_BASE: 'YOUR_API_ENDPOINT_BASE_URL', // e.g., https://script.google.com/macros/s/XXX/exec
+};
