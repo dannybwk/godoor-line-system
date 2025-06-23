@@ -6,87 +6,69 @@
   <title>歡銀學堂 - 樂齡報名系統</title>
   <link rel="stylesheet" href="styles.css" />
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <script>
-    const API_BASE = 'https://script.google.com/macros/s/AKfycbwzd92TWf8P7jh--pkeeTc7SorLsHppVOpwisTZTShCmQ3slVtTamZquHldG4VH0Y-LVA/exec';
-  </script>
   <script src="config.js"></script>
   <style>
     body {
+      font-family: sans-serif;
+      max-width: 700px;
+      margin: auto;
       padding: 16px;
-      background-color: #FFF9F2;
-      font-family: "Noto Sans TC", sans-serif;
-      text-align: center;
+      background-color: #fffef8;
     }
     header {
       text-align: center;
-      margin-bottom: 24px;
+    }
+    .logo {
+      width: 120px;
+      margin-bottom: 8px;
     }
     h1 {
-      font-size: 1.75em;
-      color: #C55A11;
+      font-size: 24px;
+      color: #ff9900;
     }
-    h2 {
-      color: #C55A11;
-      margin-top: 32px;
-      font-size: 1.5em;
+    #calendar, #courseList, #registrationForm {
+      margin-top: 24px;
+    }
+    .form-group {
+      margin-bottom: 16px;
     }
     label {
-      font-size: 1.25em;
+      font-size: 18px;
       display: block;
-      margin-top: 12px;
+      margin-bottom: 4px;
     }
     input, textarea, select {
+      font-size: 18px;
       width: 100%;
-      padding: 12px;
-      font-size: 1.1em;
-      margin-top: 4px;
-      box-sizing: border-box;
-      border-radius: 6px;
-      border: 1px solid #ccc;
+      padding: 6px;
     }
-    .submit-btn {
-      font-size: 1.5em;
-      padding: 16px;
-      margin-top: 24px;
-      margin-bottom: 72px;
-      width: 100%;
-      background-color: #F58220;
+    button[type="submit"] {
+      background-color: #ff9900;
       color: white;
+      font-size: 20px;
+      padding: 12px;
       border: none;
-      border-radius: 8px;
-    }
-    #contentWrapper {
-      display: flex;
-      flex-direction: column;
-      gap: 32px;
-      align-items: center;
-    }
-    #calendarSection, #eventList, form {
-      max-width: 720px;
-      margin: 0 auto;
-    }
-    @media (min-width: 768px) {
-      #contentWrapper {
-        flex-direction: row;
-        justify-content: center;
-        align-items: flex-start;
-      }
-      #eventList, form {
-        width: 50%;
-      }
-    }
-    footer {
-      margin-top: 48px;
-      font-size: 1.1em;
-      color: #555;
-    }
-    footer img {
+      width: 100%;
       margin-top: 12px;
+    }
+    #footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 14px;
+    }
+    #footer img {
+      margin-top: 4px;
       width: 80px;
     }
-    footer span {
-      color: #F58220;
-      font-weight: bold;
+    @media (min-width: 768px) {
+      main {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+      #registrationForm {
+        grid-column: span 2;
+      }
     }
   </style>
 </head>
@@ -95,53 +77,46 @@
     <img src="logo.png" alt="歡銀學堂 LOGO" class="logo" />
     <h1>歡銀學堂 活動報名</h1>
   </header>
+
   <main>
-    <!-- 第一部分：月曆 -->
-    <section id="calendarSection">
-      <h2>🗓 課程月曆</h2>
-      <div id="calendar"></div>
-    </section>
+    <div id="calendar"></div>
 
-    <!-- 第二與第三部分：活動列表與報名表單（桌機版左右並排，手機版上下） -->
-    <section id="contentWrapper">
-      <div id="eventList">
-        <h2>📚 活動一覽</h2>
-        <div id="courseList"></div>
+    <div id="courseList"></div>
+
+    <form id="registrationForm">
+      <div class="form-group">
+        <label>姓名（必填）</label><input name="姓名" required />
       </div>
-
-      <form id="registrationForm">
-        <h2>📝 報名表單</h2>
-        <div class="form-group">
-          <label>姓名（必填）</label><input name="姓名" required />
-        </div>
-        <div class="form-group">
-          <label>LINE上的名字（必填）</label><input name="LINE的名字" required />
-        </div>
-        <div class="form-group">
-          <label>電子郵件</label><input name="電子郵件" type="email" />
-        </div>
-        <div class="form-group">
-          <label>手機號碼（必填）</label><input name="手機號碼" required />
-        </div>
-        <div class="form-group">
-          <label>性別</label>
-          <select name="性別">
-            <option value="男">男</option>
-            <option value="女">女</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>備註</label><textarea name="備註"></textarea>
-        </div>
-        <div id="customFields"></div>
-        <button type="submit" class="submit-btn">送出報名</button>
-      </form>
-    </section>
+      <div class="form-group">
+        <label>LINE上的名字（必填）</label><input name="LINE的名字" required />
+      </div>
+      <div class="form-group">
+        <label>性別</label>
+        <select name="性別">
+          <option value="">請選擇</option>
+          <option value="男">男</option>
+          <option value="女">女</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>手機號碼（必填）</label><input name="手機號碼" required />
+      </div>
+      <div class="form-group">
+        <label>電子郵件</label><input name="電子郵件" type="email" />
+      </div>
+      <div class="form-group">
+        <label>備註</label><textarea name="備註"></textarea>
+      </div>
+      <div id="customFields"></div>
+      <button type="submit">送出報名</button>
+    </form>
   </main>
-  <footer>
-    <div>Powered by <span>果多</span></div>
-    <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" alt="果多 Logo" />
-  </footer>
+
+  <div id="footer">
+    Powered by <span style="color:#ff9900;">果多</span><br/>
+    <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" alt="果多 logo" />
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
