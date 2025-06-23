@@ -7,6 +7,63 @@
   <link rel="stylesheet" href="styles.css" />
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="config.js"></script>
+  <style>
+    body {
+      padding: 16px;
+      background-color: #FFF9F2;
+      font-family: "Noto Sans TC", sans-serif;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-size: 1.75em;
+      color: #C55A11;
+    }
+    h2 {
+      color: #C55A11;
+      margin-top: 32px;
+      font-size: 1.5em;
+    }
+    label {
+      font-size: 1.25em;
+      display: block;
+      margin-top: 12px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      font-size: 1.1em;
+      margin-top: 4px;
+      box-sizing: border-box;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    .submit-btn {
+      font-size: 1.5em;
+      padding: 16px;
+      margin-top: 24px;
+      width: 100%;
+      background-color: #F58220;
+      color: white;
+      border: none;
+      border-radius: 8px;
+    }
+    #contentWrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+    @media (min-width: 768px) {
+      #contentWrapper {
+        flex-direction: row;
+      }
+      #eventList, form {
+        width: 50%;
+      }
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -30,16 +87,16 @@
       <form id="registrationForm">
         <h2>📝 報名表單</h2>
         <div class="form-group">
-          <label>姓名</label><input name="姓名" required />
+          <label>姓名（必填）</label><input name="姓名" required />
         </div>
         <div class="form-group">
-          <label>LINE 的名字</label><input name="LINE的名字" required />
+          <label>LINE上的名字（必填）</label><input name="LINE的名字" required />
         </div>
         <div class="form-group">
           <label>電子郵件</label><input name="電子郵件" type="email" />
         </div>
         <div class="form-group">
-          <label>手機號碼</label><input name="手機號碼" required />
+          <label>手機號碼（必填）</label><input name="手機號碼" required />
         </div>
         <div class="form-group">
           <label>備註</label><textarea name="備註"></textarea>
