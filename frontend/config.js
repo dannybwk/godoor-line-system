@@ -1,4 +1,4 @@
-// config.js.template
+// config.js
 
 const CONFIG = {
   LIFF_ID: '2007618883-ewZnj9Py',
