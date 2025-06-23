@@ -6,12 +6,16 @@
   <title>歡銀學堂 - 樂齡報名系統</title>
   <link rel="stylesheet" href="styles.css" />
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script>
+    const API_BASE = 'https://script.google.com/macros/s/AKfycbwzd92TWf8P7jh--pkeeTc7SorLsHppVOpwisTZTShCmQ3slVtTamZquHldG4VH0Y-LVA/exec';
+  </script>
   <script src="config.js"></script>
   <style>
     body {
       padding: 16px;
       background-color: #FFF9F2;
       font-family: "Noto Sans TC", sans-serif;
+      text-align: center;
     }
     header {
       text-align: center;
@@ -44,7 +48,7 @@
       font-size: 1.5em;
       padding: 16px;
       margin-top: 24px;
-      margin-bottom: 48px;
+      margin-bottom: 72px;
       width: 100%;
       background-color: #F58220;
       color: white;
@@ -65,25 +69,24 @@
       #contentWrapper {
         flex-direction: row;
         justify-content: center;
+        align-items: flex-start;
       }
       #eventList, form {
         width: 50%;
       }
     }
     footer {
-      text-align: center;
       margin-top: 48px;
-      font-size: 1em;
-      color: #333;
+      font-size: 1.1em;
+      color: #555;
     }
-    .powered-by {
+    footer img {
+      margin-top: 12px;
+      width: 80px;
+    }
+    footer span {
       color: #F58220;
       font-weight: bold;
-    }
-    .logo-footer {
-      width: 80px;
-      height: auto;
-      margin-top: 8px;
     }
   </style>
 </head>
@@ -136,8 +139,8 @@
     </section>
   </main>
   <footer>
-    <p>Powered by <span class="powered-by">果多</span></p>
-    <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" alt="果多 Logo" class="logo-footer" />
+    <div>Powered by <span>果多</span></div>
+    <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" alt="果多 Logo" />
   </footer>
   <script src="script.js"></script>
 </body>
