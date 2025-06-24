@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>果多線上報名</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body class="bg-yellow-50 text-gray-800 p-4">
+
+  <h1 class="text-2xl font-bold text-orange-600 mb-4">📅 本月課程報名</h1>
+
+  <div id="event-list" class="space-y-4 mb-6"></div>
+
+  <form id="signup-form" class="bg-white p-4 rounded shadow space-y-4">
+    <h2 class="text-xl font-bold text-orange-500">📝 基本資料</h2>
+
+    <input type="text" name="姓名" placeholder="請輸入姓名" class="w-full border rounded p-2 text-lg" required />
+    <input type="text" name="LINE的名字" id="lineName" class="w-full border rounded p-2 text-lg" readonly />
+    <input type="text" name="LINE ID" id="lineId" class="w-full border rounded p-2 text-lg" readonly />
+    <input type="text" name="手機號碼" placeholder="請輸入手機號碼" class="w-full border rounded p-2 text-lg" />
+    <input type="email" name="電子郵件" placeholder="請輸入電子郵件" class="w-full border rounded p-2 text-lg" />
+
+    <div id="custom-fields" class="space-y-2"></div>
+
+    <button type="submit" class="bg-orange-500 text-white px-4 py-2 rounded text-lg">送出報名</button>
+    <p id="response" class="text-green-600 font-bold mt-2"></p>
+  </form>
+
+  <script>
+    const API_BASE = "https://script.google.com/macros/s/AKfycbwzd92TWf8P7jh--pkeeTc7SorLsHppVOpwisTZTShCmQ3slVtTamZquHldG4VH0Y-LVA/exec";
+    const LIFF_ID = "2007618883-ewZnj9Py";
+
+    let selectedEventId = null;
+    let selectedCustomQuestions = [];
+
+    async function fetchEvents() {
+      const res = await fetch(API_BASE);
+      const events = await res.json();
+      const list = document.getElementById("event-list");
+
+      events.forEach(ev => {
+        const div = document.createElement("div");
+        div.className = "bg-white rounded shadow p-4";
+        div.innerHTML = `
+          <label class="flex items-start space-x-2">
+            <input type="radio" name="活動ID" value="${ev.活動ID}" class="mt-1" />
+            <div>
+              <div class="text-lg font-semibold">${ev.活動標題}</div>
+              <div class="text-sm text-gray-600">${ev.講師}｜${ev.活動日期} ${ev.開始時間}</div>
+            </div>
+          </label>
+        `;
+        list.appendChild(div);
+      });
+
+      document.querySelectorAll("input[name='活動ID']").forEach(radio => {
+        radio.addEventListener("change", (e) => {
+          selectedEventId = e.target.value;
+          const event = events.find(ev => ev.活動ID === selectedEventId);
+          renderCustomFields(event["活動內容或備註"]);
+        });
+      });
+    }
+
+    function renderCustomFields(json) {
+      const area = document.getElementById("custom-fields");
+      area.innerHTML = "";
+      try {
+        const parsed = JSON.parse(json);
+        selectedCustomQuestions = parsed.customQuestions || [];
+        selectedCustomQuestions.forEach((q, i) => {
+          if (q.type === "text") {
+            area.innerHTML += `<input type="text" name="custom_${i}" placeholder="${q.question}" class="w-full border rounded p-2" />`;
+          } else if (q.type === "radio") {
+            area.innerHTML += `<div><p>${q.question}</p>` +
+              q.options.map(opt => `
+                <label class="mr-2"><input type="radio" name="custom_${i}" value="${opt}"> ${opt}</label>
+              `).join("") + `</div>`;
+          }
+        });
+      } catch {
+        area.innerHTML = "";
+      }
+    }
+
+    async function initLIFF() {
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) liff.login();
+      const profile = await liff.getProfile();
+      document.getElementById("lineName").value = profile.displayName;
+      document.getElementById("lineId").value = profile.userId;
+    }
+
+    document.getElementById("signup-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      if (!selectedEventId) return alert("請先選擇一堂課");
+
+      const payload = {
+        活動ID: selectedEventId,
+        姓名: fd.get("姓名"),
+        LINE的名字: fd.get("LINE的名字"),
+        LINE ID: fd.get("LINE ID"),
+        手機號碼: fd.get("手機號碼"),
+        電子郵件: fd.get("電子郵件"),
+        備註: "",
+      };
+
+      selectedCustomQuestions.forEach((q, i) => {
+        payload[`自訂欄位_${i}`] = fd.get(`custom_${i}`) || "";
+      });
+
+      const res = await fetch(API_BASE, {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" }
+      });
+      const result = await res.json();
+      document.getElementById("response").textContent = result.message;
+    });
+
+    fetchEvents();
+    initLIFF();
+  </script>
+</body>
+</html>
