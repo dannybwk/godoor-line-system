@@ -1,3 +1,4 @@
+<!-- 請從 <!DOCTYPE html> 開始整份覆蓋 -->
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -54,6 +55,15 @@
           <input type="text" class="form-control" id="name" name="name" required>
         </div>
         <div class="mb-3">
+          <label for="gender">性別 <span class="required">(必填)</span></label>
+          <select class="form-select" id="gender" name="gender" required>
+            <option value="">請選擇性別</option>
+            <option value="男">男</option>
+            <option value="女">女</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div class="mb-3">
           <label for="lineName">LINE的名字 <span class="required">(必填)</span></label>
           <input type="text" class="form-control" id="lineName" name="lineName" required>
         </div>
@@ -87,7 +97,7 @@
         const res = await fetch(API_BASE + '?action=getEvents');
         const data = await res.json();
         const events = siteParam
-          ? data.filter(e => e.organizer === siteParam)
+          ? data.filter(e => e['活動主辦人或單位'] === siteParam)
           : data;
         renderEvents(events);
       } catch (err) {
@@ -107,10 +117,10 @@
         const checkbox = document.createElement('div');
         checkbox.className = 'form-check event-checkbox';
         checkbox.innerHTML = `
-          <input class="form-check-input" type="checkbox" value="${event.id}" id="event-${event.id}" name="events">
-          <label class="form-check-label" for="event-${event.id}">
-            <div class="event-title">${event.title}</div>
-            <div class="event-info">${event.date} ${event.time} - ${event.teacher}</div>
+          <input class="form-check-input" type="checkbox" value="${event['活動ID']}" id="event-${event['活動ID']}" name="events">
+          <label class="form-check-label" for="event-${event['活動ID']}">
+            <div class="event-title">${event['活動標題']}</div>
+            <div class="event-info">${event['活動日期']} ${event['開始時間']} - ${event['講師']}</div>
           </label>
         `;
         container.appendChild(checkbox);
