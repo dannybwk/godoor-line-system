@@ -2,56 +2,51 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>果多線上報名</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body class="bg-yellow-50 text-gray-800 p-4">
-
   <h1 class="text-2xl font-bold text-orange-600 mb-6">📅 本月課程報名</h1>
+  <div id="site-info" class="text-lg text-gray-700 mb-4"></div>
   <div id="event-list" class="space-y-4 mb-8"></div>
+
   <form id="signup-form" class="bg-white p-6 rounded shadow space-y-5">
     <h2 class="text-xl font-bold text-orange-500">📝 基本資料</h2>
-
     <div>
       <label class="block text-lg mb-1">姓名（必填）</label>
       <input type="text" name="姓名" placeholder="請輸入姓名" class="w-full border rounded p-3 text-lg" required />
     </div>
-
     <div>
       <label class="block text-lg mb-1">LINE的名字（必填）</label>
       <input type="text" name="LINE的名字" id="lineName" class="w-full border rounded p-3 text-lg bg-gray-100" readonly required />
     </div>
-
     <input type="hidden" name="LINE ID" id="lineId" />
-
     <div>
       <label class="block text-lg mb-1">手機號碼（必填）</label>
       <input type="text" name="手機號碼" placeholder="請輸入手機號碼" class="w-full border rounded p-3 text-lg" required />
     </div>
-
     <div>
       <label class="block text-lg mb-1">電子郵件</label>
       <input type="email" name="電子郵件" placeholder="請輸入電子郵件" class="w-full border rounded p-3 text-lg" />
     </div>
-
     <div id="custom-fields" class="space-y-4"></div>
-
     <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded text-lg font-bold">
       ✅ 送出報名
     </button>
-
     <p id="response" class="text-center text-xl font-bold mt-4 text-green-700"></p>
   </form>
+
   <div class="mt-12 text-center">
     <p class="text-lg">Powered by <span class="text-orange-500 font-bold">果多</span></p>
     <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" alt="果多 Logo" class="mx-auto mt-2 w-20 h-20 rounded-full shadow" />
   </div>
+
   <script>
     const API_BASE = "https://script.google.com/macros/s/AKfycbwzd92TWf8P7jh--pkeeTc7SorLsHppVOpwisTZTShCmQ3slVtTamZquHldG4VH0Y-LVA/exec";
     const LIFF_ID = "2007618883-ewZnj9Py";
-
+    const siteParam = new URLSearchParams(window.location.search).get("site");
     let selectedEventIds = [];
     let eventMap = {};
 
@@ -59,8 +54,22 @@
       const res = await fetch(API_BASE);
       const events = await res.json();
       const list = document.getElementById("event-list");
+      const siteDisplay = document.getElementById("site-info");
 
-      events.forEach(ev => {
+      const filtered = siteParam
+        ? events.filter(ev => ev["活動主辦人或單位"]?.trim() === siteParam.trim())
+        : events;
+
+      if (siteParam) {
+        siteDisplay.textContent = `📍 當前據點：${siteParam}`;
+      }
+
+      if (filtered.length === 0) {
+        list.innerHTML = `<p class="text-lg text-red-600">查無符合此據點的活動。</p>`;
+        return;
+      }
+
+      filtered.forEach(ev => {
         eventMap[ev.活動ID] = ev;
         const div = document.createElement("div");
         div.className = "bg-white rounded shadow p-4 border border-gray-200";
