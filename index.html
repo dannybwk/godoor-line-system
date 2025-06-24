@@ -43,6 +43,7 @@
 </head>
 <body>
   <div class="container py-3">
+    <h2 id="site-name" class="text-center mb-3"></h2>
     <h4 class="text-orange mb-3">
       <img src="https://cdn-icons-png.flaticon.com/128/747/747310.png" style="width:28px;margin-right:6px"/>
       本月課程報名
@@ -97,6 +98,10 @@
     const API_BASE = 'https://script.google.com/macros/s/AKfycbxpDCRA2PJXLy8ssWwG3NO4QZzg87gmUdB1vHWjYNdf9jmz-ku0yfnovhtfz58ep0oE/exec';
     const urlParams = new URLSearchParams(window.location.search);
     const siteParam = urlParams.get('site');
+
+    if (siteParam) {
+      document.getElementById('site-name').textContent = siteParam;
+    }
 
     const fetchEvents = async () => {
       try {
