@@ -123,16 +123,8 @@
         const rawTime = event['開始時間'];
         const teacher = event['講師'];
 
+        let displayDate = '';
         let displayTime = '';
-        try {
-          const timeStr = rawTime.toString().trim();
-          const [hour, minute] = timeStr.split(':');
-          displayTime = `${hour}:${minute}`;
-        } catch {
-          displayTime = rawTime;
-        }
-
-        let displayDate = rawDate;
         try {
           const d = new Date(rawDate);
           if (!isNaN(d)) {
@@ -142,6 +134,18 @@
             displayDate = `${month}/${date}（${weekday}）`;
           }
         } catch {}
+
+        try {
+          const timeStr = rawTime.toString().trim();
+          const parts = timeStr.split(':');
+          if (parts.length >= 2) {
+            displayTime = `${parts[0]}:${parts[1]}`;
+          } else {
+            displayTime = timeStr;
+          }
+        } catch {
+          displayTime = rawTime;
+        }
 
         const checkbox = document.createElement('div');
         checkbox.className = 'form-check event-checkbox';
