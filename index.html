@@ -86,7 +86,7 @@
       const res = await fetch(API_BASE + '?action=getEvents');
       const data = await res.json();
       const events = siteParam
-        ? data.filter(e => e['活動主辦人或單位'] === siteParam)
+        ? data.filter(e => e.site === siteParam)
         : data;
       renderEvents(events);
     };
@@ -99,11 +99,11 @@
       }
       container.innerHTML = '';
       events.forEach(event => {
-        const id = event['活動ID'];
-        const title = event['活動標題'];
-        const date = event['活動日期'];
-        const time = event['開始時間'];
-        const teacher = event['講師'];
+        const id = event.id;
+        const title = event.title;
+        const date = event.date;
+        const time = event.time;
+        const teacher = event.teacher;
 
         const checkbox = document.createElement('div');
         checkbox.className = 'form-check event-checkbox';
