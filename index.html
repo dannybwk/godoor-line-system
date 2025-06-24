@@ -9,23 +9,45 @@
 </head>
 <body class="bg-yellow-50 text-gray-800 p-4">
 
-  <h1 class="text-2xl font-bold text-orange-600 mb-4">📅 本月課程報名</h1>
+  <h1 class="text-2xl font-bold text-orange-600 mb-6">📅 本月課程報名</h1>
 
-  <div id="event-list" class="space-y-4 mb-6"></div>
+  <div id="event-list" class="space-y-4 mb-8"></div>
 
-  <form id="signup-form" class="bg-white p-4 rounded shadow space-y-4">
+  <form id="signup-form" class="bg-white p-6 rounded shadow space-y-5">
     <h2 class="text-xl font-bold text-orange-500">📝 基本資料</h2>
 
-    <input type="text" name="姓名" placeholder="請輸入姓名" class="w-full border rounded p-2 text-lg" required />
-    <input type="text" name="LINE的名字" id="lineName" class="w-full border rounded p-2 text-lg" readonly />
-    <input type="text" name="LINE ID" id="lineId" class="w-full border rounded p-2 text-lg" readonly />
-    <input type="text" name="手機號碼" placeholder="請輸入手機號碼" class="w-full border rounded p-2 text-lg" />
-    <input type="email" name="電子郵件" placeholder="請輸入電子郵件" class="w-full border rounded p-2 text-lg" />
+    <div>
+      <label class="block text-lg mb-1">姓名</label>
+      <input type="text" name="姓名" placeholder="請輸入姓名" class="w-full border rounded p-3 text-lg" required />
+    </div>
 
-    <div id="custom-fields" class="space-y-2"></div>
+    <div>
+      <label class="block text-lg mb-1">LINE的名字</label>
+      <input type="text" name="LINE的名字" id="lineName" class="w-full border rounded p-3 text-lg bg-gray-100" readonly />
+    </div>
 
-    <button type="submit" class="bg-orange-500 text-white px-4 py-2 rounded text-lg">送出報名</button>
-    <p id="response" class="text-green-600 font-bold mt-2"></p>
+    <div>
+      <label class="block text-lg mb-1">LINE ID</label>
+      <input type="text" name="LINE ID" id="lineId" class="w-full border rounded p-3 text-lg bg-gray-100" readonly />
+    </div>
+
+    <div>
+      <label class="block text-lg mb-1">手機號碼</label>
+      <input type="text" name="手機號碼" placeholder="請輸入手機號碼" class="w-full border rounded p-3 text-lg" />
+    </div>
+
+    <div>
+      <label class="block text-lg mb-1">電子郵件</label>
+      <input type="email" name="電子郵件" placeholder="請輸入電子郵件" class="w-full border rounded p-3 text-lg" />
+    </div>
+
+    <div id="custom-fields" class="space-y-4"></div>
+
+    <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded text-lg font-bold">
+      ✅ 送出報名
+    </button>
+
+    <p id="response" class="text-center text-xl font-bold mt-4 text-green-700"></p>
   </form>
 
   <script>
@@ -42,12 +64,12 @@
 
       events.forEach(ev => {
         const div = document.createElement("div");
-        div.className = "bg-white rounded shadow p-4";
+        div.className = "bg-white rounded shadow p-4 border border-gray-200";
         div.innerHTML = `
           <label class="flex items-start space-x-2">
             <input type="radio" name="活動ID" value="${ev.活動ID}" class="mt-1" />
             <div>
-              <div class="text-lg font-semibold">${ev.活動標題}</div>
+              <div class="text-lg font-semibold text-orange-700">${ev.活動標題}</div>
               <div class="text-sm text-gray-600">${ev.講師}｜${ev.活動日期} ${ev.開始時間}</div>
             </div>
           </label>
@@ -72,11 +94,14 @@
         selectedCustomQuestions = parsed.customQuestions || [];
         selectedCustomQuestions.forEach((q, i) => {
           if (q.type === "text") {
-            area.innerHTML += `<input type="text" name="custom_${i}" placeholder="${q.question}" class="w-full border rounded p-2" />`;
+            area.innerHTML += `<div>
+              <label class="block text-lg mb-1">${q.question}</label>
+              <input type="text" name="custom_${i}" class="w-full border rounded p-3" />
+            </div>`;
           } else if (q.type === "radio") {
-            area.innerHTML += `<div><p>${q.question}</p>` +
+            area.innerHTML += `<div><p class="text-lg font-semibold">${q.question}</p>` +
               q.options.map(opt => `
-                <label class="mr-2"><input type="radio" name="custom_${i}" value="${opt}"> ${opt}</label>
+                <label class="mr-3"><input type="radio" name="custom_${i}" value="${opt}" class="mr-1"> ${opt}</label>
               `).join("") + `</div>`;
           }
         });
