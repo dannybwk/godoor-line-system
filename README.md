@@ -1,61 +1,88 @@
-# GoDoor 樂齡活動報名系統
+  # GoDoor 線上報名系統（適樂齡活動）
 
-此專案為長者友善的 LINE LIFF 報名平台，使用 Google Apps Script + Google Sheets 作為後端，支援自訂欄位與 LINE ID 綁定。
+> 一個為長者友善設計的線上活動報名平台，採用 Google Sheet + HTML 靜態頁 + LINE LIFF 整合實作，無需後端伺服器、低成本維運。
 
 ---
 
-## 📁 專案結構
+## 🧩 系統架構簡介
 
-```
-frontend/             # 前端靜態頁
-├── index.html        # 主頁面（課程月曆與報名表）
-├── styles.css        # 基本樣式
-├── script.js         # 活動載入、報名送出邏輯
-├── config.js.template# LIFF ID & API 設定模板
+使用者（LINE） → LIFF 登入 → 活動月曆頁（HTML） → 呼叫 Apps Script API → 寫入 Google Sheet 報名紀錄
 
-apps-script/          # Google Apps Script 程式
-├── Code.gs           # 包含 getEvents / submitRegistration / Flex 推播等功能
+主辦方 → 填寫 Google 表單上架活動 → 自動寫入活動總表
 
-liff/                 # LIFF 整合相關
-├── login.html        # LIFF 登入頁（若未登入會自動導向）
+less
+Copy
+Edit
 
-```
+- 前端：HTML + Tailwind + Vanilla JS
+- 資料庫：Google Sheet（活動總表 + 報名紀錄表）
+- API：Google Apps Script 提供 `GET` / `POST`
+- 推播：LINE Messaging API 推送報名成功 & 提醒通知
+- 使用者登入：LINE LIFF 自動帶入名字與 LINE ID
+- 部署：Netlify / Vercel（靜態頁）
 
-## 🔧 部署方式
+---
 
-### 1. Google Sheets
-- 建立 `活動總表` 與 `報名紀錄表` 兩個 Sheet，參考範本欄位。
+## 🔗 Demo 與資源連結
 
-### 2. Google Apps Script
-- 新增專案，貼上 `apps-script/Code.gs` 內容
-- 發佈為網路應用程式，記下 deploy URL（做為 API_BASE）
+| 項目 | 連結 |
+|------|------|
+| GitHub Repo | https://github.com/dannybwk/godoor-line-system |
+| Google Sheet（資料庫） | [活動總表與報名紀錄](https://docs.google.com/spreadsheets/d/13IwMmUYPOCrQOpF7yBnjtM0whoMOxfQb2wpQkoPGYnY/edit) |
+| LINE LIFF ID | `2007618883-ewZnj9Py` |
+| Web App API Endpoint | [`GET` / `POST`](https://script.google.com/macros/s/AKfycbwzd92TWf8P7jh--pkeeTc7SorLsHppVOpwisTZTShCmQ3slVtTamZquHldG4VH0Y-LVA/exec) |
+| 活動上架表單 | [Google Form](https://docs.google.com/forms/d/1BShSREDikHSSkNNcaPjd-FDXAAaea6W5K8ghJJPxvhk/edit) |
 
-### 3. LINE LIFF 設定
-- 使用 LINE Developers 建立 Messaging API channel
-- 新增 LIFF app，記下 LIFF ID
+---
 
-### 4. Netlify 前端部署
-- 將 `frontend/` 上傳或連 GitHub 部署至 Netlify
-- 複製 `config.js.template` 為 `config.js`，填入你的 LIFF ID 與 API BASE URL
+## 📌 API 文件
 
-## 💡 自訂欄位格式
-在活動表的 `活動內容或備註` 欄位，填入 JSON：
+### GET `/events`
+取得所有公開活動資料。
+
+#### 範例回傳：
 ```json
+[
+  {
+    "活動ID": "a001",
+    "活動標題": "樂齡手作課程",
+    "講師": "王老師",
+    "活動日期": "2025-07-15",
+    "開始時間": "10:00",
+    "活動內容或備註": "{ \"customQuestions\": [...] }"
+  },
+  ...
+]
+POST /register
+傳送使用者報名資料。
+
+參數欄位（JSON）：
+欄位名稱	說明
+姓名	報名者姓名
+LINE的名字	自動從 LIFF 帶入
+LINE ID	自動從 LIFF 帶入
+電子郵件	選填
+手機號碼	選填
+活動ID	被勾選的活動 ID
+備註	其他補充
+
+回傳格式：
+json
+Copy
+Edit
 {
-  "customQuestions": [
-    { "type": "radio", "label": "你是否有瑜伽經驗？", "options": ["有", "沒有"] },
-    { "type": "text", "label": "你希望帶來什麼？" }
-  ]
+  "status": "success",
+  "message": "報名成功"
 }
-```
+📋 資料欄位設計
+活動總表：
+活動ID、活動標題、講師、活動日期、開始時間、活動內容或備註（含自訂欄位 JSON）
 
-## ✅ 功能清單
-- [x] 支援多堂課勾選報名
-- [x] 自動產生自訂欄位題目
-- [x] LINE LIFF 自動登入、取得 LINE ID
-- [x] 自動推播報名成功訊息
-- [x] 防止重複報名（LINE ID + 活動ID 為唯一）
+報名紀錄表：
+報名時間、姓名、LINE的名字、LINE ID、電子郵件、手機號碼、活動ID、備註、出席狀態
 
----
+✅ 專案開發進度（Issues）
+請參考 GitHub Issues 查看目前功能分工與待辦事項。
 
-Made with ❤️ by 果多
+✨ License
+MIT License
