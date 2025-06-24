@@ -125,7 +125,8 @@
 
         let displayTime = '';
         try {
-          const [hour, minute] = rawTime.split(':');
+          const timeStr = rawTime.toString().trim();
+          const [hour, minute] = timeStr.split(':');
           displayTime = `${hour}:${minute}`;
         } catch {
           displayTime = rawTime;
@@ -134,10 +135,12 @@
         let displayDate = rawDate;
         try {
           const d = new Date(rawDate);
-          const month = d.getMonth() + 1;
-          const date = d.getDate();
-          const weekday = getWeekday(d);
-          displayDate = `${month}/${date}（${weekday}）`;
+          if (!isNaN(d)) {
+            const month = d.getMonth() + 1;
+            const date = d.getDate();
+            const weekday = getWeekday(d);
+            displayDate = `${month}/${date}（${weekday}）`;
+          }
         } catch {}
 
         const checkbox = document.createElement('div');
