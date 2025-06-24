@@ -51,19 +51,19 @@
       <form id="signup-form">
         <div class="mb-3">
           <label for="name">姓名 <span class="required">(必填)</span></label>
-          <input type="text" class="form-control" id="name" name="name" placeholder="請輸入姓名" required>
+          <input type="text" class="form-control" id="name" name="name" required>
         </div>
         <div class="mb-3">
           <label for="lineName">LINE的名字 <span class="required">(必填)</span></label>
-          <input type="text" class="form-control" id="lineName" name="lineName" placeholder="請輸入LINE名稱" required>
+          <input type="text" class="form-control" id="lineName" name="lineName" required>
         </div>
         <div class="mb-3">
           <label for="phone">手機號碼 <span class="required">(必填)</span></label>
-          <input type="tel" class="form-control" id="phone" name="phone" placeholder="請輸入手機號碼" required>
+          <input type="tel" class="form-control" id="phone" name="phone" required>
         </div>
         <div class="mb-3">
           <label for="email">電子郵件</label>
-          <input type="email" class="form-control" id="email" name="email" placeholder="請輸入電子郵件">
+          <input type="email" class="form-control" id="email" name="email">
         </div>
         <div id="custom-fields"></div>
         <input type="hidden" id="lineId" name="lineId">
@@ -78,17 +78,22 @@
   </div>
 
   <script>
-    const API_BASE = 'https://script.google.com/macros/s/AKfycbwzd92TWf8P7jh--pkeeTc7SorLsHppVOpwisTZTShCmQ3slVtTamZquHldG4VH0Y-LVA/exec';
+    const API_BASE = 'https://script.google.com/macros/s/AKfycbwzd92TWf8P7jJh--pkeeTc7SorLsHppVOpwisTZTShCmQ3slVtTamZquHldG4VH0Y-LVA/exec';
     const urlParams = new URLSearchParams(window.location.search);
     const siteParam = urlParams.get('site');
 
     const fetchEvents = async () => {
-      const res = await fetch(API_BASE + '?action=getEvents');
-      const data = await res.json();
-      const events = siteParam
-        ? data.filter(e => e.site === siteParam)
-        : data;
-      renderEvents(events);
+      try {
+        const res = await fetch(API_BASE + '?action=getEvents');
+        const data = await res.json();
+        const events = siteParam
+          ? data.filter(e => e.organizer === siteParam)
+          : data;
+        renderEvents(events);
+      } catch (err) {
+        console.error(err);
+        document.getElementById('events-container').innerHTML = '<p style="color:red;">無法載入活動，請稍後再試。</p>';
+      }
     };
 
     const renderEvents = (events) => {
@@ -99,19 +104,13 @@
       }
       container.innerHTML = '';
       events.forEach(event => {
-        const id = event.id;
-        const title = event.title;
-        const date = event.date;
-        const time = event.time;
-        const teacher = event.teacher;
-
         const checkbox = document.createElement('div');
         checkbox.className = 'form-check event-checkbox';
         checkbox.innerHTML = `
-          <input class="form-check-input" type="checkbox" value="${id}" id="event-${id}" name="events">
-          <label class="form-check-label" for="event-${id}">
-            <div class="event-title">${title}</div>
-            <div class="event-info">${date} ${time} - ${teacher}</div>
+          <input class="form-check-input" type="checkbox" value="${event.id}" id="event-${event.id}" name="events">
+          <label class="form-check-label" for="event-${event.id}">
+            <div class="event-title">${event.title}</div>
+            <div class="event-info">${event.date} ${event.time} - ${event.teacher}</div>
           </label>
         `;
         container.appendChild(checkbox);
