@@ -43,7 +43,10 @@
 </head>
 <body>
   <div class="container py-3">
-    <h2 id="site-name" class="text-center mb-3"></h2>
+    <!-- 據點名稱標題 -->
+    <h1 id="site-title" class="text-center mb-2" style="color:#f07f2f; font-size:2.2rem; font-weight:bold;"></h1>
+
+    <!-- 課程報名主標 -->
     <h4 class="text-orange mb-3">
       <img src="https://cdn-icons-png.flaticon.com/128/747/747310.png" style="width:28px;margin-right:6px"/>
       本月課程報名
@@ -100,7 +103,7 @@
     const siteParam = urlParams.get('site');
 
     if (siteParam) {
-      document.getElementById('site-name').textContent = siteParam;
+      document.getElementById('site-title').textContent = siteParam;
     }
 
     const fetchEvents = async () => {
@@ -157,7 +160,6 @@
         }
         await fetch(API_BASE, { method: 'POST', body });
 
-        // 即時推送 LINE 訊息
         await fetch(API_BASE, {
           method: 'POST',
           body: new URLSearchParams({
