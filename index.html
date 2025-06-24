@@ -61,8 +61,8 @@
           <input type="text" class="form-control" id="name" name="name" placeholder="請輸入姓名" required>
         </div>
         <div class="mb-3">
-          <label for="lineName">LINE的名字 <span class="required">(必填)</span></label>
-          <input type="text" class="form-control" id="lineName" name="lineName" placeholder="請輸入LINE名稱" required>
+          <label for="lineName">LINE上的名字 <span class="required">(必填)</span></label>
+          <input type="text" class="form-control" id="lineName" name="lineName" placeholder="請輸入LINE上的名字" required>
         </div>
         <div class="mb-3">
           <label for="gender">性別</label>
@@ -139,7 +139,7 @@
           }
         } catch {}
 
-        displayTime = rawTime?.toString().split(':').slice(0,2).join(':') || '';
+        displayTime = (typeof rawTime === 'string') ? rawTime.replace(/^1899-12-30T/, '').split(':').slice(0,2).join(':') : rawTime;
 
         const checkbox = document.createElement('div');
         checkbox.className = 'form-check event-checkbox';
