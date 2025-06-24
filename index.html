@@ -66,7 +66,12 @@
         </div>
         <div class="mb-3">
           <label for="gender">性別</label>
-          <input type="text" class="form-control" id="gender" name="gender" placeholder="請輸入性別">
+          <select class="form-select" id="gender" name="gender">
+            <option value="">請選擇</option>
+            <option value="男">男</option>
+            <option value="女">女</option>
+            <option value="其他">其他</option>
+          </select>
         </div>
         <div class="mb-3">
           <label for="phone">手機號碼 <span class="required">(必填)</span></label>
@@ -92,54 +97,29 @@
     const API_BASE = 'https://script.google.com/macros/s/AKfycbxpDCRA2PJXLy8ssWwG3NO4QZzg87gmUdB1vHWjYNdf9jmz-ku0yfnovhtfz58ep0oE/exec';
     const urlParams = new URLSearchParams(window.location.search);
     const siteParam = urlParams.get('site');
-    let allEvents = [];
 
     const fetchEvents = async () => {
       try {
         const res = await fetch(API_BASE + '?action=getEvents');
         const data = await res.json();
-        allEvents = siteParam
+        const events = siteParam
           ? data.filter(e => e['活動主辦人或單位'] === siteParam)
           : data;
-        renderEvents(allEvents);
-      } catch (err) {
+        renderEvents(events);
+      } catch (e) {
         document.getElementById('events-container').innerHTML = '無法載入活動，請稍後再試。';
-        console.error(err);
       }
-    };
-
-    const getWeekday = (dateObj) => {
-      const weekdays = ['日','一','二','三','四','五','六'];
-      return weekdays[dateObj.getDay()];
     };
 
     const renderEvents = (events) => {
       const container = document.getElementById('events-container');
-      if (!events.length) {
-        container.innerHTML = '<p>目前沒有活動。</p>';
-        return;
-      }
       container.innerHTML = '';
       events.forEach(event => {
         const id = event['活動ID'];
         const title = event['活動標題'];
-        const rawDate = event['活動日期'];
-        const rawTime = event['開始時間'];
+        const date = event['活動開始日期'];
+        const time = event['開始時間'];
         const teacher = event['講師'];
-
-        let displayDate = '';
-        let displayTime = '';
-        try {
-          const d = new Date(rawDate);
-          if (!isNaN(d)) {
-            const month = d.getMonth() + 1;
-            const date = d.getDate();
-            const weekday = getWeekday(d);
-            displayDate = `${month}/${date}（${weekday}）`;
-          }
-        } catch {}
-
-        displayTime = (typeof rawTime === 'string') ? rawTime.replace(/^1899-12-30T/, '').split(':').slice(0,2).join(':') : rawTime;
 
         const checkbox = document.createElement('div');
         checkbox.className = 'form-check event-checkbox';
@@ -147,43 +127,10 @@
           <input class="form-check-input" type="checkbox" value="${id}" id="event-${id}" name="events">
           <label class="form-check-label" for="event-${id}">
             <div class="event-title">${title}</div>
-            <div class="event-info">${displayDate} ${displayTime} - ${teacher}</div>
+            <div class="event-info">${date} ${time} - ${teacher}</div>
           </label>
         `;
-        checkbox.querySelector('input').addEventListener('change', handleCustomFields);
         container.appendChild(checkbox);
-      });
-    };
-
-    const handleCustomFields = () => {
-      const container = document.getElementById('custom-fields');
-      container.innerHTML = '';
-      const selectedIds = [...document.querySelectorAll('input[name="events"]:checked')].map(e => e.value);
-      selectedIds.forEach(id => {
-        const event = allEvents.find(e => e['活動ID'] === id);
-        if (!event || !event['活動內容或備註']) return;
-        try {
-          const json = JSON.parse(event['活動內容或備註']);
-          if (!Array.isArray(json.customQuestions)) return;
-          json.customQuestions.forEach(q => {
-            const fieldName = `custom_${id}_${q.name}`;
-            const wrapper = document.createElement('div');
-            wrapper.className = 'custom-question';
-            wrapper.innerHTML = `<label>${q.label}</label>`;
-            if (q.type === 'radio') {
-              q.options.forEach(opt => {
-                const idVal = `${fieldName}_${opt}`;
-                wrapper.innerHTML += `<div class="form-check">
-                  <input class="form-check-input" type="radio" name="${fieldName}" id="${idVal}" value="${opt}">
-                  <label class="form-check-label" for="${idVal}">${opt}</label>
-                </div>`;
-              });
-            } else {
-              wrapper.innerHTML += `<input class="form-control" type="text" name="${fieldName}" placeholder="請填寫">`;
-            }
-            container.appendChild(wrapper);
-          });
-        } catch {}
       });
     };
 
@@ -204,10 +151,19 @@
           body.set(k, v);
         }
         await fetch(API_BASE, { method: 'POST', body });
+
+        // 即時推送 LINE 訊息
+        await fetch(API_BASE, {
+          method: 'POST',
+          body: new URLSearchParams({
+            action: 'pushMessage',
+            eventId: ev,
+            lineId: formData.get('lineId')
+          })
+        });
       }
       alert('報名成功！');
       form.reset();
-      document.getElementById('custom-fields').innerHTML = '';
     };
 
     document.getElementById('signup-form').addEventListener('submit', submitForm);
