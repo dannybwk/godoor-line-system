@@ -136,12 +136,19 @@
         } catch {}
 
         try {
-          const timeStr = rawTime.toString().trim();
-          const parts = timeStr.split(':');
-          if (parts.length >= 2) {
-            displayTime = `${parts[0]}:${parts[1]}`;
+          if (typeof rawTime === 'number') {
+            const totalMinutes = Math.round(rawTime * 24 * 60);
+            const hours = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+            const minutes = (totalMinutes % 60).toString().padStart(2, '0');
+            displayTime = `${hours}:${minutes}`;
           } else {
-            displayTime = timeStr;
+            const timeStr = rawTime.toString().trim();
+            const parts = timeStr.split(':');
+            if (parts.length >= 2) {
+              displayTime = `${parts[0]}:${parts[1]}`;
+            } else {
+              displayTime = timeStr;
+            }
           }
         } catch {
           displayTime = rawTime;
