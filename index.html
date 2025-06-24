@@ -36,6 +36,9 @@
       padding: 1rem;
       font-size: 1.3rem;
     }
+    .custom-question {
+      margin-bottom: 1rem;
+    }
   </style>
 </head>
 <body>
@@ -89,15 +92,16 @@
     const API_BASE = 'https://script.google.com/macros/s/AKfycbxpDCRA2PJXLy8ssWwG3NO4QZzg87gmUdB1vHWjYNdf9jmz-ku0yfnovhtfz58ep0oE/exec';
     const urlParams = new URLSearchParams(window.location.search);
     const siteParam = urlParams.get('site');
+    let allEvents = [];
 
     const fetchEvents = async () => {
       try {
         const res = await fetch(API_BASE + '?action=getEvents');
         const data = await res.json();
-        const events = siteParam
+        allEvents = siteParam
           ? data.filter(e => e['活動主辦人或單位'] === siteParam)
           : data;
-        renderEvents(events);
+        renderEvents(allEvents);
       } catch (err) {
         document.getElementById('events-container').innerHTML = '無法載入活動，請稍後再試。';
         console.error(err);
@@ -135,24 +139,7 @@
           }
         } catch {}
 
-        try {
-          if (typeof rawTime === 'number') {
-            const totalMinutes = Math.round(rawTime * 24 * 60);
-            const hours = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
-            const minutes = (totalMinutes % 60).toString().padStart(2, '0');
-            displayTime = `${hours}:${minutes}`;
-          } else {
-            const timeStr = rawTime.toString().trim();
-            const parts = timeStr.split(':');
-            if (parts.length >= 2) {
-              displayTime = `${parts[0]}:${parts[1]}`;
-            } else {
-              displayTime = timeStr;
-            }
-          }
-        } catch {
-          displayTime = rawTime;
-        }
+        displayTime = rawTime?.toString().split(':').slice(0,2).join(':') || '';
 
         const checkbox = document.createElement('div');
         checkbox.className = 'form-check event-checkbox';
@@ -163,7 +150,40 @@
             <div class="event-info">${displayDate} ${displayTime} - ${teacher}</div>
           </label>
         `;
+        checkbox.querySelector('input').addEventListener('change', handleCustomFields);
         container.appendChild(checkbox);
+      });
+    };
+
+    const handleCustomFields = () => {
+      const container = document.getElementById('custom-fields');
+      container.innerHTML = '';
+      const selectedIds = [...document.querySelectorAll('input[name="events"]:checked')].map(e => e.value);
+      selectedIds.forEach(id => {
+        const event = allEvents.find(e => e['活動ID'] === id);
+        if (!event || !event['活動內容或備註']) return;
+        try {
+          const json = JSON.parse(event['活動內容或備註']);
+          if (!Array.isArray(json.customQuestions)) return;
+          json.customQuestions.forEach(q => {
+            const fieldName = `custom_${id}_${q.name}`;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'custom-question';
+            wrapper.innerHTML = `<label>${q.label}</label>`;
+            if (q.type === 'radio') {
+              q.options.forEach(opt => {
+                const idVal = `${fieldName}_${opt}`;
+                wrapper.innerHTML += `<div class="form-check">
+                  <input class="form-check-input" type="radio" name="${fieldName}" id="${idVal}" value="${opt}">
+                  <label class="form-check-label" for="${idVal}">${opt}</label>
+                </div>`;
+              });
+            } else {
+              wrapper.innerHTML += `<input class="form-control" type="text" name="${fieldName}" placeholder="請填寫">`;
+            }
+            container.appendChild(wrapper);
+          });
+        } catch {}
       });
     };
 
@@ -187,6 +207,7 @@
       }
       alert('報名成功！');
       form.reset();
+      document.getElementById('custom-fields').innerHTML = '';
     };
 
     document.getElementById('signup-form').addEventListener('submit', submitForm);
