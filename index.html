@@ -8,7 +8,7 @@
   <style>
     body {
       background: #fffbe7;
-      font-size: 1.15rem;
+      font-size: 1.55rem;
     }
     .calendar-section, .form-section {
       background: white;
@@ -17,14 +17,14 @@
       margin-top: 1rem;
     }
     .event-checkbox {
-      margin-bottom: 0.8rem;
+      margin-bottom: 1rem;
     }
     .event-title {
       font-weight: bold;
-      font-size: 1.25rem;
+      font-size: 1.7rem;
     }
     .event-info {
-      font-size: 1.1rem;
+      font-size: 1.5rem;
       color: #666;
     }
     .required {
@@ -34,7 +34,7 @@
     .footer {
       text-align: center;
       padding: 1rem;
-      font-size: 0.95rem;
+      font-size: 1.3rem;
     }
   </style>
 </head>
@@ -44,7 +44,7 @@
       <img src="https://cdn-icons-png.flaticon.com/128/747/747310.png" style="width:28px;margin-right:6px"/>
       本月課程報名
     </h4>
-    
+
     <div id="event-list" class="calendar-section">
       <h5 class="mb-3">📅 請勾選想報名的課程</h5>
       <div id="events-container">載入中...</div>
@@ -104,6 +104,11 @@
       }
     };
 
+    const getWeekday = (dateObj) => {
+      const weekdays = ['日','一','二','三','四','五','六'];
+      return weekdays[dateObj.getDay()];
+    };
+
     const renderEvents = (events) => {
       const container = document.getElementById('events-container');
       if (!events.length) {
@@ -114,21 +119,26 @@
       events.forEach(event => {
         const id = event['活動ID'];
         const title = event['活動標題'];
-        const date = event['活動日期'];
+        const rawDate = event['活動日期'];
         const rawTime = event['開始時間'];
         const teacher = event['講師'];
 
-        let timeStr = '';
+        let displayTime = '';
         try {
-          const timeObj = new Date('1970-01-01T' + rawTime);
-          if (!isNaN(timeObj)) {
-            timeStr = timeObj.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
-          } else {
-            timeStr = rawTime;
-          }
+          const [hour, minute] = rawTime.split(':');
+          displayTime = `${hour}:${minute}`;
         } catch {
-          timeStr = rawTime;
+          displayTime = rawTime;
         }
+
+        let displayDate = rawDate;
+        try {
+          const d = new Date(rawDate);
+          const month = d.getMonth() + 1;
+          const date = d.getDate();
+          const weekday = getWeekday(d);
+          displayDate = `${month}/${date}（${weekday}）`;
+        } catch {}
 
         const checkbox = document.createElement('div');
         checkbox.className = 'form-check event-checkbox';
@@ -136,7 +146,7 @@
           <input class="form-check-input" type="checkbox" value="${id}" id="event-${id}" name="events">
           <label class="form-check-label" for="event-${id}">
             <div class="event-title">${title}</div>
-            <div class="event-info">${date} ${timeStr} - ${teacher}</div>
+            <div class="event-info">${displayDate} ${displayTime} - ${teacher}</div>
           </label>
         `;
         container.appendChild(checkbox);
