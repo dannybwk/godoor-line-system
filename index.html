@@ -10,9 +10,7 @@
 <body class="bg-yellow-50 text-gray-800 p-4">
 
   <h1 class="text-2xl font-bold text-orange-600 mb-6">📅 本月課程報名</h1>
-
   <div id="event-list" class="space-y-4 mb-8"></div>
-
   <form id="signup-form" class="bg-white p-6 rounded shadow space-y-5">
     <h2 class="text-xl font-bold text-orange-500">📝 基本資料</h2>
 
@@ -26,7 +24,6 @@
       <input type="text" name="LINE的名字" id="lineName" class="w-full border rounded p-3 text-lg bg-gray-100" readonly required />
     </div>
 
-    <!-- LINE ID 不顯示，只隱藏 -->
     <input type="hidden" name="LINE ID" id="lineId" />
 
     <div>
@@ -47,19 +44,16 @@
 
     <p id="response" class="text-center text-xl font-bold mt-4 text-green-700"></p>
   </form>
-
-  <!-- footer 區塊 -->
   <div class="mt-12 text-center">
     <p class="text-lg">Powered by <span class="text-orange-500 font-bold">果多</span></p>
     <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" alt="果多 Logo" class="mx-auto mt-2 w-20 h-20 rounded-full shadow" />
   </div>
-
   <script>
     const API_BASE = "https://script.google.com/macros/s/AKfycbwzd92TWf8P7jh--pkeeTc7SorLsHppVOpwisTZTShCmQ3slVtTamZquHldG4VH0Y-LVA/exec";
     const LIFF_ID = "2007618883-ewZnj9Py";
 
-    let selectedEventId = null;
-    let selectedCustomQuestions = [];
+    let selectedEventIds = [];
+    let eventMap = {};
 
     async function fetchEvents() {
       const res = await fetch(API_BASE);
@@ -67,11 +61,12 @@
       const list = document.getElementById("event-list");
 
       events.forEach(ev => {
+        eventMap[ev.活動ID] = ev;
         const div = document.createElement("div");
         div.className = "bg-white rounded shadow p-4 border border-gray-200";
         div.innerHTML = `
           <label class="flex items-start space-x-2">
-            <input type="radio" name="活動ID" value="${ev.活動ID}" class="mt-1" />
+            <input type="checkbox" name="活動ID" value="${ev.活動ID}" class="mt-1" />
             <div>
               <div class="text-lg font-semibold text-orange-700">${ev.活動標題}</div>
               <div class="text-sm text-gray-600">${ev.講師}｜${ev.活動日期} ${ev.開始時間}</div>
@@ -81,11 +76,15 @@
         list.appendChild(div);
       });
 
-      document.querySelectorAll("input[name='活動ID']").forEach(radio => {
-        radio.addEventListener("change", (e) => {
-          selectedEventId = e.target.value;
-          const event = events.find(ev => ev.活動ID === selectedEventId);
-          renderCustomFields(event["活動內容或備註"]);
+      document.querySelectorAll("input[name='活動ID']").forEach(box => {
+        box.addEventListener("change", () => {
+          selectedEventIds = Array.from(document.querySelectorAll("input[name='活動ID']:checked")).map(e => e.value);
+          if (selectedEventIds.length > 0) {
+            const latestEvent = eventMap[selectedEventIds[selectedEventIds.length - 1]];
+            renderCustomFields(latestEvent["活動內容或備註"]);
+          } else {
+            document.getElementById("custom-fields").innerHTML = "";
+          }
         });
       });
     }
@@ -95,8 +94,8 @@
       area.innerHTML = "";
       try {
         const parsed = JSON.parse(json);
-        selectedCustomQuestions = parsed.customQuestions || [];
-        selectedCustomQuestions.forEach((q, i) => {
+        const questions = parsed.customQuestions || [];
+        questions.forEach((q, i) => {
           if (q.type === "text") {
             area.innerHTML += `<div>
               <label class="block text-lg mb-1">${q.question}</label>
@@ -125,29 +124,42 @@
     document.getElementById("signup-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
-      if (!selectedEventId) return alert("請先選擇一堂課");
+      if (selectedEventIds.length === 0) return alert("請至少選擇一堂課");
 
-      const payload = {
-        活動ID: selectedEventId,
-        姓名: fd.get("姓名"),
-        LINE的名字: fd.get("LINE的名字"),
-        LINE ID: fd.get("LINE ID"),
-        手機號碼: fd.get("手機號碼"),
-        電子郵件: fd.get("電子郵件"),
-        備註: "",
-      };
+      let success = 0;
+      let duplicate = 0;
 
-      selectedCustomQuestions.forEach((q, i) => {
-        payload[`自訂欄位_${i}`] = fd.get(`custom_${i}`) || "";
-      });
+      for (const eventId of selectedEventIds) {
+        const payload = {
+          活動ID: eventId,
+          姓名: fd.get("姓名"),
+          LINE的名字: fd.get("LINE的名字"),
+          LINE ID: fd.get("LINE ID"),
+          手機號碼: fd.get("手機號碼"),
+          電子郵件: fd.get("電子郵件"),
+          備註: "",
+        };
 
-      const res = await fetch(API_BASE, {
-        method: "POST",
-        body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" }
-      });
-      const result = await res.json();
-      document.getElementById("response").textContent = result.message;
+        const questions = eventMap[eventId]["活動內容或備註"];
+        try {
+          const parsed = JSON.parse(questions);
+          (parsed.customQuestions || []).forEach((q, i) => {
+            payload[`自訂欄位_${i}`] = fd.get(`custom_${i}`) || "";
+          });
+        } catch {}
+
+        const res = await fetch(API_BASE, {
+          method: "POST",
+          body: JSON.stringify(payload),
+          headers: { "Content-Type": "application/json" }
+        });
+        const result = await res.json();
+        if (result.status === "success") success++;
+        else duplicate++;
+      }
+
+      document.getElementById("response").textContent =
+        `報名完成：${success} 堂成功，${duplicate} 堂已報名過`;
     });
 
     fetchEvents();
