@@ -17,23 +17,21 @@
     <h2 class="text-xl font-bold text-orange-500">📝 基本資料</h2>
 
     <div>
-      <label class="block text-lg mb-1">姓名</label>
+      <label class="block text-lg mb-1">姓名（必填）</label>
       <input type="text" name="姓名" placeholder="請輸入姓名" class="w-full border rounded p-3 text-lg" required />
     </div>
 
     <div>
-      <label class="block text-lg mb-1">LINE的名字</label>
-      <input type="text" name="LINE的名字" id="lineName" class="w-full border rounded p-3 text-lg bg-gray-100" readonly />
+      <label class="block text-lg mb-1">LINE的名字（必填）</label>
+      <input type="text" name="LINE的名字" id="lineName" class="w-full border rounded p-3 text-lg bg-gray-100" readonly required />
     </div>
 
-    <div>
-      <label class="block text-lg mb-1">LINE ID</label>
-      <input type="text" name="LINE ID" id="lineId" class="w-full border rounded p-3 text-lg bg-gray-100" readonly />
-    </div>
+    <!-- LINE ID 不顯示，只隱藏 -->
+    <input type="hidden" name="LINE ID" id="lineId" />
 
     <div>
-      <label class="block text-lg mb-1">手機號碼</label>
-      <input type="text" name="手機號碼" placeholder="請輸入手機號碼" class="w-full border rounded p-3 text-lg" />
+      <label class="block text-lg mb-1">手機號碼（必填）</label>
+      <input type="text" name="手機號碼" placeholder="請輸入手機號碼" class="w-full border rounded p-3 text-lg" required />
     </div>
 
     <div>
@@ -49,6 +47,12 @@
 
     <p id="response" class="text-center text-xl font-bold mt-4 text-green-700"></p>
   </form>
+
+  <!-- footer 區塊 -->
+  <div class="mt-12 text-center">
+    <p class="text-lg">Powered by <span class="text-orange-500 font-bold">果多</span></p>
+    <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" alt="果多 Logo" class="mx-auto mt-2 w-20 h-20 rounded-full shadow" />
+  </div>
 
   <script>
     const API_BASE = "https://script.google.com/macros/s/AKfycbwzd92TWf8P7jh--pkeeTc7SorLsHppVOpwisTZTShCmQ3slVtTamZquHldG4VH0Y-LVA/exec";
