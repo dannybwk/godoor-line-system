@@ -108,7 +108,7 @@
 
     const fetchEvents = async () => {
       try {
-        const res = await fetch(API_BASE + '?action=getEvents');
+        const res = await fetch(`${API_BASE}?mode=events&site=${siteParam}`);
         const data = await res.json();
         const events = siteParam
           ? data.filter(e => e['活動主辦人或單位'] === siteParam)
