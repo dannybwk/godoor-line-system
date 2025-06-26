@@ -35,22 +35,45 @@
         <tbody id="signupTableBody"></tbody>
       </table>
     </div>
+    <div id="debug-log" class="mt-4 alert alert-secondary d-none"></div>
   </div>
 
   <script>
-    const API_BASE = "https://script.google.com/macros/s/AKfycbzJZVHlsTwQ_QyEyjVXR5lF4sLcTR2HCQdNIu8t0-4qWPJCU6k1fkpWhZSIw_k_ELAC/exec"; // 換成你的 API URL
+    const API_BASE = "https://script.google.com/macros/s/AKfycbzJZVHlsTwQ_QyEyjVXR5lF4sLcTR2HCQdNIu8t0-4qWPJCU6k1fkpWhZSIw_k_ELAC/exec";
     const site = new URLSearchParams(location.search).get('site') || '';
 
     async function fetchEvents() {
-      const res = await fetch(`${API_BASE}?mode=events&site=${site}`);
-      const data = await res.json();
-      const eventSelect = document.getElementById('eventSelect');
-      data.forEach(ev => {
-        const opt = document.createElement('option');
-        opt.value = ev.活動ID;
-        opt.textContent = `${ev.活動日期}｜${ev.活動標題}`;
-        eventSelect.appendChild(opt);
-      });
+      try {
+        const res = await fetch(`${API_BASE}?mode=events&site=${site}`);
+        const contentType = res.headers.get("content-type") || "";
+
+        if (!res.ok || !contentType.includes("application/json")) {
+          throw new Error(`HTTP ${res.status}：無效回應格式`);
+        }
+
+        const data = await res.json();
+        const eventSelect = document.getElementById('eventSelect');
+
+        if (!Array.isArray(data) || data.length === 0) {
+          showDebug(`⚠️ 無活動資料：請確認「活動總表」是否有正確填寫以及是否包含據點名稱「${site}」`);
+          return;
+        }
+
+        data.forEach(ev => {
+          const opt = document.createElement('option');
+          opt.value = ev.活動ID;
+          opt.textContent = `${ev.活動日期}｜${ev.活動標題}`;
+          eventSelect.appendChild(opt);
+        });
+      } catch (err) {
+        showDebug(`❌ 無法載入活動：${err.message}`);
+      }
+    }
+
+    function showDebug(msg) {
+      const box = document.getElementById('debug-log');
+      box.classList.remove('d-none');
+      box.textContent = msg;
     }
 
     async function fetchSignups(eventId) {
@@ -74,6 +97,13 @@
         `;
         tbody.appendChild(tr);
       });
+    }
+
+    function formatSignupSuccessMessage(eventTitle, eventDate, eventTime, location = '', userId = '') {
+      const msg = `📌 您已成功報名以下活動：\n\n《${eventTitle}》\n🗓 日期：${eventDate} ${eventTime}\n📍 地點：${location}\n\n我們將於活動前一天再次提醒您，歡迎準時參加！`;
+      console.log('🚀 將推送訊息給：', userId);
+      console.log('訊息內容：', msg);
+      return msg;
     }
 
     document.getElementById('eventSelect').addEventListener('change', e => {
