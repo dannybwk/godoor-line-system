@@ -20,11 +20,16 @@
       <table class="table table-bordered table-striped">
         <thead class="table-dark">
           <tr>
+            <th>報名時間</th>
             <th>姓名</th>
             <th>LINE 名稱</th>
-            <th>電話</th>
-            <th>報名時間</th>
+            <th>LINE ID</th>
+            <th>電子郵件</th>
+            <th>手機號碼</th>
             <th>備註</th>
+            <th>活動ID</th>
+            <th>出席狀態</th>
+            <th>性別</th>
           </tr>
         </thead>
         <tbody id="signupTableBody"></tbody>
@@ -56,11 +61,16 @@
       data.forEach(row => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${row.姓名 || ''}</td>
-          <td>${row.LINE名稱 || ''}</td>
-          <td>${row.手機號碼 || ''}</td>
           <td>${row.報名時間 || ''}</td>
+          <td>${row.姓名 || ''}</td>
+          <td>${row.LINE的名字 || ''}</td>
+          <td>${row.LINE_ID || ''}</td>
+          <td>${row.電子郵件 || ''}</td>
+          <td>${row.手機號碼 || ''}</td>
           <td>${row.備註 || ''}</td>
+          <td>${row.活動ID || ''}</td>
+          <td>${row.出席狀態 || ''}</td>
+          <td>${row.性別 || ''}</td>
         `;
         tbody.appendChild(tr);
       });
