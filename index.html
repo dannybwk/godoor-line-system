@@ -79,13 +79,22 @@
       document.getElementById('site-title').textContent = siteParam;
     }
 
-    liff.init({ liffId: '2007618883-ewZnj9Py' }).then(() => {
-      return liff.getProfile();
-    }).then(profile => {
-      document.getElementById('lineId').value = profile.userId;
-    }).catch(err => {
-      console.error('LIFF 初始化失敗', err);
-    });
+    async function initLiff() {
+      try {
+        await liff.init({ liffId: '2007618883-ewZnj9Py' });
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+        const profile = await liff.getProfile();
+        document.getElementById('lineId').value = profile.userId;
+        document.getElementById('lineName').value = profile.displayName;
+      } catch (err) {
+        console.error('LIFF 初始化失敗', err);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', initLiff);
 
     let eventMap = {}; // 活動ID -> customQuestions 對應
 
