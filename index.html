@@ -336,18 +336,18 @@
             setupForm();
         });
         
-        // 載入活動資料 - 使用 GET 請求避免 CORS 問題
+        // 修正的載入活動資料函式 - 適應現有回應格式
         async function loadEvents() {
             console.log('開始載入活動資料，據點:', siteKeyword);
-            
+    
             const eventsContainer = document.getElementById('events-container');
             eventsContainer.innerHTML = '<div class="loading-message">載入中...</div>';
-            
+    
             try {
                 // 使用 GET 請求載入活動
                 const url = `${APPS_SCRIPT_URL}?mode=events&site=${encodeURIComponent(siteKeyword)}`;
                 console.log('請求 URL:', url);
-                
+        
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: {
@@ -355,17 +355,16 @@
                         'Cache-Control': 'no-cache'
                     }
                 });
-                
+        
                 console.log('回應狀態:', response.status, response.statusText);
-                console.log('回應標頭:', Object.fromEntries(response.headers.entries()));
-                
+        
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
-                
+        
                 const responseText = await response.text();
-                console.log('原始回應內容:', responseText.substring(0, 500) + '...');
-                
+                console.log('原始回應內容:', responseText.substring(0, 200) + '...');
+        
                 let data;
                 try {
                     data = JSON.parse(responseText);
@@ -373,54 +372,63 @@
                     console.error('JSON 解析失敗:', jsonError);
                     throw new Error('伺服器回應格式錯誤');
                 }
-                
-                console.log('解析後的資料:', data);
-                
-                if (data.error) {
-                    throw new Error(`伺服器錯誤: ${data.error}`);
+        
+                console.log('解析後的資料類型:', Array.isArray(data) ? '陣列' : '物件');
+        
+                // 處理不同的回應格式
+                if (Array.isArray(data)) {
+                    // 如果直接回傳陣列格式 [活動1, 活動2, ...]
+                    console.log('使用陣列格式，活動數量:', data.length);
+                    allEvents = data;
+                    registrationCounts = {}; // 暫時沒有報名統計
+                } else if (data && data.events) {
+                    // 如果是包裝格式 {events: [...], registrationCounts: {...}}
+                    console.log('使用物件格式，活動數量:', data.events.length);
+                    allEvents = data.events;
+                    registrationCounts = data.registrationCounts || {};
+                } else {
+                    console.error('未知的資料格式:', data);
+                    throw new Error('資料格式不符預期');
                 }
-                
-                allEvents = data.events || [];
-                registrationCounts = data.registrationCounts || {};
-                
-                console.log('活動數量:', allEvents.length);
+        
+                console.log('最終活動數量:', allEvents.length);
                 console.log('報名統計:', registrationCounts);
-                
+        
                 if (allEvents.length > 0) {
                     console.log('第一個活動:', allEvents[0]);
+                    renderCalendarView();
+                    renderListView();
+                } else {
+                    eventsContainer.innerHTML = '<div class="error-message"><h6>📝 目前沒有可報名的課程</h6><p>請確認據點名稱是否正確，或聯繫主辦單位。</p></div>';
                 }
-                
-                renderCalendarView();
-                renderListView();
-                
+        
             } catch (error) {
                 console.error('載入活動失敗:', error);
-                
+        
                 // 顯示詳細的錯誤訊息
                 let errorMessage = '<div class="error-message">';
                 errorMessage += '<h6>🚨 載入課程資料失敗</h6>';
-                
-                if (error.message.includes('CORS')) {
-                    errorMessage += '<p><strong>問題：</strong>跨域存取被封鎖</p>';
-                    errorMessage += '<p><strong>解決方案：</strong>請檢查 Apps Script 部署設定，確認存取權限設為「任何人」</p>';
-                } else if (error.message.includes('Failed to fetch') || error.message.includes('網路錯誤')) {
+        
+                if (error.message.includes('Failed to fetch')) {
                     errorMessage += '<p><strong>問題：</strong>無法連接到伺服器</p>';
                     errorMessage += '<p><strong>可能原因：</strong></p>';
-                    errorMessage += '<ul><li>Apps Script URL 不正確</li><li>網路連線問題</li><li>Apps Script 尚未部署</li></ul>';
+                    errorMessage += '<ul><li>網路連線問題</li><li>Apps Script 服務暫時不可用</li><li>CORS 權限問題</li></ul>';
                 } else if (error.message.includes('HTTP')) {
                     errorMessage += `<p><strong>HTTP 錯誤：</strong>${error.message}</p>`;
                 } else {
                     errorMessage += `<p><strong>錯誤詳情：</strong>${error.message}</p>`;
                 }
-                
-                errorMessage += '<p><strong>除錯建議：</strong></p>';
+        
+                errorMessage += '<p><strong>解決建議：</strong></p>';
                 errorMessage += '<ol>';
-                errorMessage += '<li>按 F12 開啟開發者工具查看 Console 錯誤</li>';
-                errorMessage += '<li>確認 Apps Script URL 正確</li>';
-                errorMessage += '<li>確認 Apps Script 已部署且存取權限正確</li>';
+                errorMessage += '<li>檢查網路連線</li>';
+                errorMessage += '<li>重新整理頁面 (F5)</li>';
+                errorMessage += '<li>清除瀏覽器快取 (Ctrl+F5)</li>';
+                errorMessage += '<li>稍後再試</li>';
                 errorMessage += '</ol>';
+                errorMessage += '<button class="btn btn-warning" onclick="loadEvents()">🔄 重新載入</button>';
                 errorMessage += '</div>';
-                
+        
                 eventsContainer.innerHTML = errorMessage;
             }
         }
