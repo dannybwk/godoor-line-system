@@ -1,210 +1,617 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <title>果多 - 本月課程報名</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <style>
-    body { background: #fffbe7; font-size: 1.55rem; }
-    .calendar-section, .form-section { background: white; border-radius: 10px; padding: 1.5rem; margin-top: 1rem; }
-    .event-checkbox { margin-bottom: 1rem; }
-    .event-title { font-weight: bold; font-size: 1.7rem; }
-    .event-info { font-size: 1.5rem; color: #666; }
-    .required { color: red; margin-left: 4px; }
-    .footer { text-align: center; padding: 1rem; font-size: 1.3rem; }
-    .custom-question { margin-bottom: 1rem; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>本月課程報名</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Microsoft JhengHei', Arial, sans-serif; 
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        
+        .container { 
+            max-width: 900px; 
+            margin: 20px auto; 
+            padding: 20px;
+        }
+        
+        h1, h5 { 
+            color: #f57c00; 
+            font-weight: bold;
+        }
+        
+        /* 月曆樣式 */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(245, 124, 0, 0.1);
+        }
+        
+        .calendar-header {
+            text-align: center;
+            font-weight: bold;
+            color: #f57c00;
+            padding: 15px 5px;
+            font-size: 18px;
+        }
+        
+        .calendar-day {
+            min-height: 120px;
+            border: 2px solid #ffe0b2;
+            border-radius: 10px;
+            padding: 8px;
+            background: #fafafa;
+            position: relative;
+        }
+        
+        .calendar-day.today {
+            background: #fff3e0;
+            border-color: #ff9800;
+        }
+        
+        .day-number {
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .event-item {
+            background: #ff9800;
+            color: white;
+            padding: 4px 6px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 3px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .event-item:hover {
+            background: #f57c00;
+            transform: translateY(-1px);
+        }
+        
+        .event-item.selected {
+            background: #4caf50;
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+        }
+        
+        .event-item.full {
+            background: #757575;
+            cursor: not-allowed;
+        }
+        
+        /* 課程清單樣式 */
+        .event-list-item {
+            background: white;
+            border: 2px solid #ffe0b2;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .event-list-item:hover {
+            border-color: #ff9800;
+            box-shadow: 0 4px 15px rgba(245, 124, 0, 0.2);
+        }
+        
+        .event-list-item.selected {
+            border-color: #4caf50;
+            background: #f1f8e9;
+        }
+        
+        .event-list-item.full {
+            background: #f5f5f5;
+            border-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .event-checkbox {
+            width: 20px;
+            height: 20px;
+            margin-right: 15px;
+        }
+        
+        .event-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #f57c00;
+            margin-bottom: 8px;
+        }
+        
+        .event-details {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .full-badge {
+            background: #f44336;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        
+        /* 表單樣式 */
+        .form-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(245, 124, 0, 0.1);
+            margin-top: 30px;
+        }
+        
+        .form-control, .form-select {
+            font-size: 16px;
+            padding: 12px;
+            border: 2px solid #ffe0b2;
+            border-radius: 10px;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: #ff9800;
+            box-shadow: 0 0 0 0.2rem rgba(255, 152, 0, 0.25);
+        }
+        
+        .btn-warning {
+            background: #ff9800;
+            border: none;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 15px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-warning:hover {
+            background: #f57c00;
+            transform: translateY(-2px);
+        }
+        
+        .required {
+            color: #f44336;
+            font-weight: bold;
+        }
+        
+        .custom-field {
+            background: #fff3e0;
+            border: 2px solid #ffcc02;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        /* 視圖切換按鈕 */
+        .view-toggle {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .view-toggle button {
+            margin: 0 5px;
+            font-size: 16px;
+        }
+    </style>
 </head>
 <body>
-  <div class="container py-3">
-    <h1 id="site-title" class="text-center mb-2" style="color:#f07f2f; font-size:2.2rem; font-weight:bold;"></h1>
-    <h4 class="text-orange mb-3">
-      <img src="https://cdn-icons-png.flaticon.com/128/747/747310.png" style="width:28px;margin-right:6px"/>
-      本月課程報名
-    </h4>
-
-    <div id="event-list" class="calendar-section">
-      <h5 class="mb-3">📅 請勾選想報名的課程</h5>
-      <div id="events-container">載入中...</div>
+    <div class="container">
+        <h1 class="text-center mb-4">🍊 本月課程報名</h1>
+        
+        <!-- 視圖切換 -->
+        <div class="view-toggle">
+            <button class="btn btn-outline-warning" onclick="showCalendarView()">📅 月曆檢視</button>
+            <button class="btn btn-outline-warning" onclick="showListView()">📋 清單檢視</button>
+        </div>
+        
+        <!-- 月曆視圖 -->
+        <div id="calendar-view" class="calendar-section">
+            <h5 class="mb-3">📅 請點選想報名的課程</h5>
+            <div id="calendar-container">
+                <div class="calendar-grid" id="calendar-grid">
+                    <!-- 月曆會動態生成 -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- 清單視圖 -->
+        <div id="list-view" class="calendar-section" style="display: none;">
+            <h5 class="mb-3">📋 請勾選想報名的課程</h5>
+            <div id="events-container">載入中...</div>
+        </div>
+        
+        <!-- 表單區域 -->
+        <div class="form-section">
+            <h5 class="mb-3">📝 基本資料</h5>
+            <form id="signup-form">
+                <div class="mb-3">
+                    <label for="name">姓名 <span class="required">(必填)</span></label>
+                    <input type="text" class="form-control" id="name" name="name" placeholder="請輸入您的姓名" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="lineName">LINE上的名字 <span class="required">(必填)</span></label>
+                    <input type="text" class="form-control" id="lineName" name="lineName" placeholder="請輸入LINE上的名字" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="gender">性別</label>
+                    <select class="form-select" id="gender" name="gender">
+                        <option value="">請選擇性別</option>
+                        <option value="男">男</option>
+                        <option value="女">女</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="age">年齡</label>
+                    <input type="number" class="form-control" id="age" name="age" placeholder="請輸入年齡" min="1" max="120">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="phone">手機號碼 <span class="required">(必填)</span></label>
+                    <input type="tel" class="form-control" id="phone" name="phone" placeholder="請輸入手機號碼" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="email">電子郵件</label>
+                    <input type="email" class="form-control" id="email" name="email" placeholder="請輸入電子郵件">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="note">備註</label>
+                    <textarea class="form-control" id="note" name="note" rows="3" placeholder="有任何需要我們知道的事情，請在這裡說明"></textarea>
+                </div>
+                
+                <!-- 動態自訂欄位 -->
+                <div id="custom-fields"></div>
+                
+                <input type="hidden" id="lineId" name="lineId">
+                <button type="submit" class="btn btn-warning w-100">✅ 送出報名</button>
+            </form>
+        </div>
+        
+        <div class="footer">
+            Powered by <span style="color:#f07f2f;font-weight:bold">果多</span><br>
+            <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" width="50" />
+        </div>
     </div>
 
-    <div class="form-section">
-      <h5 class="mb-3">📝 基本資料</h5>
-      <form id="signup-form">
-        <div class="mb-3">
-          <label for="name">姓名 <span class="required">(必填)</span></label>
-          <input type="text" class="form-control" id="name" name="name" placeholder="請輸入姓名" required>
-        </div>
-        <div class="mb-3">
-          <label for="lineName">LINE上的名字 <span class="required">(必填)</span></label>
-          <input type="text" class="form-control" id="lineName" name="lineName" placeholder="請輸入LINE上的名字" required>
-        </div>
-        <div class="mb-3">
-          <label for="gender">性別</label>
-          <select class="form-select" id="gender" name="gender">
-            <option value="">請選擇</option>
-            <option value="男">男</option>
-            <option value="女">女</option>
-            <option value="其他">其他</option>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label for="phone">手機號碼 <span class="required">(必填)</span></label>
-          <input type="tel" class="form-control" id="phone" name="phone" placeholder="請輸入手機號碼" required>
-        </div>
-        <div class="mb-3">
-          <label for="email">電子郵件</label>
-          <input type="email" class="form-control" id="email" name="email" placeholder="請輸入電子郵件">
-        </div>
-        <div id="custom-fields"></div>
-        <input type="hidden" id="lineId" name="lineId">
-        <button type="submit" class="btn btn-warning w-100">✅ 送出報名</button>
-      </form>
-    </div>
-
-    <div class="footer">
-      Powered by <span style="color:#f07f2f;font-weight:bold">果多</span><br>
-      <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" width="50" />
-    </div>
-  </div>
-
-  <script>
-    const API_BASE = "https://script.google.com/macros/s/AKfycbzJZVHlsTwQ_QyEyjVXR5lF4sLcTR2HCQdNIu8t0-4qWPJCU6k1fkpWhZSIw_k_ELAC/exec";
-    const urlParams = new URLSearchParams(window.location.search);
-    const siteParam = urlParams.get('site');
-
-    if (siteParam) {
-      document.getElementById('site-title').textContent = siteParam;
-    }
-
-    async function initLiff() {
-      try {
-        await liff.init({ liffId: '2007618883-ewZnj9Py' });
-        if (!liff.isLoggedIn()) {
-          liff.login();
-          return;
-        }
-        const profile = await liff.getProfile();
-        document.getElementById('lineId').value = profile.userId;
-        document.getElementById('lineName').value = profile.displayName;
-      } catch (err) {
-        console.error('LIFF 初始化失敗', err);
-      }
-    }
-
-    window.addEventListener('DOMContentLoaded', initLiff);
-
-    let eventMap = {}; // 活動ID -> customQuestions 對應
-
-    const fetchEvents = async () => {
-      try {
-        const res = await fetch(`${API_BASE}?mode=events&site=${siteParam}`);
-        const data = await res.json();
-        renderEvents(data);
-      } catch (e) {
-        document.getElementById('events-container').innerHTML = '❌ 無法載入活動，請稍後再試。';
-        console.error('活動載入失敗：', e);
-      }
-    };
-
-    const renderEvents = (events) => {
-      const container = document.getElementById('events-container');
-      container.innerHTML = '';
-      eventMap = {}; // reset
-
-      events.forEach(event => {
-        const id = event['活動ID'];
-        const title = event['活動標題'];
-        const date = event['活動日期'];
-        const time = event['開始時間'];
-        const teacher = event['講師'];
-        const note = event['備註'] || '';
-        let parsed = {};
-        try { parsed = JSON.parse(note); } catch {}
-        if (parsed.customQuestions) eventMap[id] = parsed.customQuestions;
-
-        const checkbox = document.createElement('div');
-        checkbox.className = 'form-check event-checkbox';
-        checkbox.innerHTML = `
-          <input class="form-check-input" type="checkbox" value="${id}" id="event-${id}" name="events">
-          <label class="form-check-label" for="event-${id}">
-            <div class="event-title">${title}</div>
-            <div class="event-info">${date} ${time} - ${teacher}</div>
-          </label>
-        `;
-        container.appendChild(checkbox);
-      });
-
-      document.querySelectorAll('input[name="events"]').forEach(input => {
-        input.addEventListener('change', updateCustomFields);
-      });
-    };
-
-    function updateCustomFields() {
-      const selected = [...document.querySelectorAll('input[name="events"]:checked')].map(e => e.value);
-      const container = document.getElementById('custom-fields');
-      container.innerHTML = '';
-      selected.forEach(id => {
-        const questions = eventMap[id];
-        if (questions) {
-          questions.forEach((q, idx) => {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'custom-question';
-            const name = `custom_${id}_${idx}`;
-            let html = `<label>${q.label}</label>`;
-            if (q.type === 'text') {
-              html += `<input type="text" name="${name}" class="form-control">`;
-            } else if (q.type === 'radio' && Array.isArray(q.options)) {
-              q.options.forEach(opt => {
-                html += `<div class="form-check">
-                  <input class="form-check-input" type="radio" name="${name}" value="${opt}">
-                  <label class="form-check-label">${opt}</label>
-                </div>`;
-              });
-            }
-            wrapper.innerHTML = html;
-            container.appendChild(wrapper);
-          });
-        }
-      });
-    }
-
-    const submitForm = async (e) => {
-      e.preventDefault();
-      const form = document.getElementById('signup-form');
-      const formData = new FormData(form);
-      const events = [...document.querySelectorAll('input[name="events"]:checked')].map(e => e.value);
-      if (events.length === 0) {
-        alert('請至少勾選一個課程');
-        return;
-      }
-      for (const ev of events) {
-        const body = new URLSearchParams();
-        body.set('action', 'register');
-        body.set('eventId', ev);
-        for (const [k, v] of formData.entries()) {
-          body.set(k, v);
-        }
-        await fetch(API_BASE, { method: 'POST', body });
-
-        await fetch(API_BASE, {
-          method: 'POST',
-          body: new URLSearchParams({
-            action: 'pushMessage',
-            eventId: ev,
-            lineId: formData.get('lineId')
-          })
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 全域變數
+        let allEvents = [];
+        let selectedEvents = [];
+        let registrationCounts = {};
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+        
+        // 從 URL 取得據點參數
+        const urlParams = new URLSearchParams(window.location.search);
+        const siteKeyword = urlParams.get('site') || '';
+        
+        // 頁面載入時初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadEvents();
+            setupForm();
         });
-      }
-      alert('報名成功！');
-      form.reset();
-      updateCustomFields();
-    };
-
-    document.getElementById('signup-form').addEventListener('submit', submitForm);
-    fetchEvents();
-  </script>
+        
+        // 載入活動資料
+        async function loadEvents() {
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=getEvents&site=${encodeURIComponent(siteKeyword)}`
+                });
+                
+                const data = await response.json();
+                allEvents = data.events || [];
+                registrationCounts = data.registrationCounts || {};
+                
+                renderCalendarView();
+                renderListView();
+            } catch (error) {
+                console.error('載入活動失敗:', error);
+                document.getElementById('events-container').innerHTML = 
+                    '<div class="alert alert-danger">載入課程資料失敗，請稍後再試</div>';
+            }
+        }
+        
+        // 檢查活動是否已滿
+        function isEventFull(eventId) {
+            const event = allEvents.find(e => e['活動ID'] === eventId);
+            if (!event || !event['活動人數上限']) return false;
+            
+            const currentCount = registrationCounts[eventId] || 0;
+            const limit = parseInt(event['活動人數上限']);
+            
+            return currentCount >= limit;
+        }
+        
+        // 渲染月曆視圖
+        function renderCalendarView() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth();
+            
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - firstDay.getDay());
+            
+            const calendarGrid = document.getElementById('calendar-grid');
+            calendarGrid.innerHTML = '';
+            
+            // 添加星期標題
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+            weekdays.forEach(day => {
+                const headerDiv = document.createElement('div');
+                headerDiv.className = 'calendar-header';
+                headerDiv.textContent = day;
+                calendarGrid.appendChild(headerDiv);
+            });
+            
+            // 生成日期格子
+            for (let i = 0; i < 42; i++) {
+                const currentDate = new Date(startDate);
+                currentDate.setDate(startDate.getDate() + i);
+                
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'calendar-day';
+                
+                if (currentDate.toDateString() === today.toDateString()) {
+                    dayDiv.classList.add('today');
+                }
+                
+                const dayNumber = document.createElement('div');
+                dayNumber.className = 'day-number';
+                dayNumber.textContent = currentDate.getDate();
+                dayDiv.appendChild(dayNumber);
+                
+                // 添加當天的活動
+                const dayEvents = allEvents.filter(event => {
+                    const eventDate = new Date(event['活動日期']);
+                    return eventDate.toDateString() === currentDate.toDateString();
+                });
+                
+                dayEvents.forEach(event => {
+                    const eventDiv = document.createElement('div');
+                    const eventId = event['活動ID'];
+                    const isFull = isEventFull(eventId);
+                    
+                    eventDiv.className = isFull ? 'event-item full' : 'event-item';
+                    eventDiv.textContent = `${event['開始時間']} ${event['活動標題']}`;
+                    
+                    if (!isFull) {
+                        eventDiv.onclick = () => toggleEventSelection(eventId, eventDiv);
+                    }
+                    
+                    dayDiv.appendChild(eventDiv);
+                });
+                
+                calendarGrid.appendChild(dayDiv);
+            }
+        }
+        
+        // 渲染清單視圖
+        function renderListView() {
+            const container = document.getElementById('events-container');
+            
+            if (!allEvents || allEvents.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">目前沒有可報名的課程</div>';
+                return;
+            }
+            
+            const html = allEvents.map(event => {
+                const eventId = event['活動ID'];
+                const isFull = isEventFull(eventId);
+                const currentCount = registrationCounts[eventId] || 0;
+                const limit = event['活動人數上限'];
+                
+                let capacityInfo = '';
+                if (limit) {
+                    capacityInfo = `<div>👥 名額：${currentCount}/${limit}`;
+                    if (isFull) {
+                        capacityInfo += ' <span class="full-badge">已額滿</span>';
+                    }
+                    capacityInfo += '</div>';
+                }
+                
+                return `
+                    <div class="event-list-item ${isFull ? 'full' : ''}" data-event-id="${eventId}" onclick="${!isFull ? `toggleEventListSelection(this, '${eventId}')` : ''}">
+                        <div class="d-flex align-items-start">
+                            <input type="checkbox" class="event-checkbox" ${isFull ? 'disabled' : ''} onchange="handleCheckboxChange(this, '${eventId}')">
+                            <div class="flex-grow-1">
+                                <div class="event-title">${event['活動標題']}</div>
+                                <div class="event-details">
+                                    <div>👨‍🏫 講師：${event['講師'] || '待確認'}</div>
+                                    <div>🗓 時間：${formatDate(event['活動日期'])} ${event['開始時間']} - ${event['結束時間'] || ''}</div>
+                                    <div>📍 地點：${event['地址或地點說明'] || '待確認'}</div>
+                                    ${capacityInfo}
+                                    ${event['活動內容'] ? `<div>📝 內容：${event['活動內容']}</div>` : ''}
+                                    ${event['備註'] ? `<div>⚠️ 備註：${event['備註']}</div>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+        
+        // 切換活動選擇狀態（月曆）
+        function toggleEventSelection(eventId, element) {
+            if (isEventFull(eventId)) return;
+            
+            const index = selectedEvents.indexOf(eventId);
+            if (index > -1) {
+                selectedEvents.splice(index, 1);
+                element.classList.remove('selected');
+            } else {
+                selectedEvents.push(eventId);
+                element.classList.add('selected');
+            }
+            updateCustomFields();
+        }
+        
+        // 切換活動選擇狀態（清單）
+        function toggleEventListSelection(element, eventId) {
+            if (isEventFull(eventId)) return;
+            
+            const checkbox = element.querySelector('.event-checkbox');
+            checkbox.checked = !checkbox.checked;
+            handleCheckboxChange(checkbox, eventId);
+        }
+        
+        // 處理勾選框變化
+        function handleCheckboxChange(checkbox, eventId) {
+            if (isEventFull(eventId)) {
+                checkbox.checked = false;
+                return;
+            }
+            
+            const listItem = checkbox.closest('.event-list-item');
+            
+            if (checkbox.checked) {
+                selectedEvents.push(eventId);
+                listItem.classList.add('selected');
+            } else {
+                const index = selectedEvents.indexOf(eventId);
+                if (index > -1) {
+                    selectedEvents.splice(index, 1);
+                }
+                listItem.classList.remove('selected');
+            }
+            updateCustomFields();
+        }
+        
+        // 更新自訂欄位
+        function updateCustomFields() {
+            const customFieldsContainer = document.getElementById('custom-fields');
+            customFieldsContainer.innerHTML = '';
+            
+            selectedEvents.forEach(eventId => {
+                const event = allEvents.find(e => e['活動ID'] === eventId);
+                if (event && event['自訂欄位問題']) {
+                    const fieldDiv = document.createElement('div');
+                    fieldDiv.className = 'custom-field';
+                    fieldDiv.innerHTML = `
+                        <label for="custom_${eventId}" class="form-label">
+                            <strong>${event['活動標題']}</strong> - ${event['自訂欄位問題']}
+                        </label>
+                        <textarea class="form-control" id="custom_${eventId}" name="custom_${eventId}" rows="2" placeholder="請輸入您的回答"></textarea>
+                    `;
+                    customFieldsContainer.appendChild(fieldDiv);
+                }
+            });
+        }
+        
+        // 視圖切換
+        function showCalendarView() {
+            document.getElementById('calendar-view').style.display = 'block';
+            document.getElementById('list-view').style.display = 'none';
+        }
+        
+        function showListView() {
+            document.getElementById('calendar-view').style.display = 'none';
+            document.getElementById('list-view').style.display = 'block';
+        }
+        
+        // 設置表單提交
+        function setupForm() {
+            document.getElementById('signup-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                if (selectedEvents.length === 0) {
+                    alert('請至少選擇一堂課程');
+                    return;
+                }
+                
+                // 檢查選中的活動是否有已滿的
+                const fullEvents = selectedEvents.filter(eventId => isEventFull(eventId));
+                if (fullEvents.length > 0) {
+                    alert('您選擇的課程中有已額滿的，請重新選擇');
+                    return;
+                }
+                
+                const formData = new FormData(this);
+                const submitBtn = this.querySelector('button[type="submit"]');
+                
+                try {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = '報名中...';
+                    
+                    // 為每個選中的活動提交報名
+                    for (const eventId of selectedEvents) {
+                        const registrationData = {
+                            action: 'register',
+                            name: formData.get('name'),
+                            lineName: formData.get('lineName'),
+                            gender: formData.get('gender'),
+                            age: formData.get('age'),
+                            phone: formData.get('phone'),
+                            email: formData.get('email'),
+                            note: formData.get('note'),
+                            eventId: eventId,
+                            lineId: formData.get('lineId')
+                        };
+                        
+                        // 添加自訂欄位回答
+                        const customField = document.getElementById(`custom_${eventId}`);
+                        if (customField) {
+                            registrationData.customFieldAnswer = customField.value;
+                        }
+                        
+                        const response = await fetch(APPS_SCRIPT_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: new URLSearchParams(registrationData)
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('報名失敗');
+                        }
+                    }
+                    
+                    alert('報名成功！我們會在活動前一天提醒您。');
+                    location.reload();
+                    
+                } catch (error) {
+                    console.error('報名錯誤:', error);
+                    alert('報名失敗，請稍後再試');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '✅ 送出報名';
+                }
+            });
+        }
+        
+        // 日期格式化
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return `${date.getMonth() + 1}/${date.getDate()}`;
+        }
+    </script>
 </body>
 </html>
