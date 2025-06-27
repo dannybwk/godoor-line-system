@@ -2,121 +2,108 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>果多據點管理後台</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>果多｜據點活動報名後台</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #fff8e1; }
+    .site-header { font-size: 1.5rem; color: #ff6f00; font-weight: bold; }
+    .event-card:hover { background-color: #fff3cd; cursor: pointer; }
+    .record-table th, .record-table td { font-size: 14px; }
+  </style>
 </head>
-<body class="bg-light">
-  <div class="container py-4">
-    <h2 class="mb-4 text-center">📋 據點活動報名查詢後台</h2>
+<body class="p-4">
+  <div class="container">
+    <div class="mb-4">
+      <div class="site-header">果多｜據點活動報名後台</div>
+    </div>
+
     <div class="mb-3">
-      <label for="eventSelect" class="form-label">請選擇活動：</label>
-      <select id="eventSelect" class="form-select"></select>
+      <label for="siteInput" class="form-label">據點啟動碼（例如：@歡銀學堂）</label>
+      <input type="text" class="form-control" id="siteInput" placeholder="請輸入據點名稱（請包含 @）">
     </div>
-    <div class="mb-3 text-end">
-      <button id="downloadBtn" class="btn btn-warning">📥 匯出簽到表 PDF</button>
-    </div>
-    <div id="signupTableWrapper" class="table-responsive">
-      <table class="table table-bordered table-striped">
-        <thead class="table-dark">
+    <button class="btn btn-warning mb-4" onclick="loadEvents()">載入活動</button>
+
+    <div id="eventList" class="mb-5"></div>
+
+    <div id="recordSection" style="display:none">
+      <h5 class="text-primary">報名紀錄</h5>
+      <table class="table table-striped table-bordered record-table">
+        <thead>
           <tr>
             <th>報名時間</th>
             <th>姓名</th>
-            <th>LINE 名稱</th>
+            <th>LINE名稱</th>
             <th>LINE ID</th>
-            <th>電子郵件</th>
-            <th>手機號碼</th>
+            <th>Email</th>
+            <th>電話</th>
             <th>備註</th>
             <th>活動ID</th>
             <th>出席狀態</th>
             <th>性別</th>
           </tr>
         </thead>
-        <tbody id="signupTableBody"></tbody>
+        <tbody id="recordTableBody"></tbody>
       </table>
     </div>
-    <div id="debug-log" class="mt-4 alert alert-secondary d-none"></div>
   </div>
 
   <script>
-    const API_BASE = "https://script.google.com/macros/s/AKfycbzJZVHlsTwQ_QyEyjVXR5lF4sLcTR2HCQdNIu8t0-4qWPJCU6k1fkpWhZSIw_k_ELAC/exec";
-    const site = new URLSearchParams(location.search).get('site') || '';
+    const API_BASE = 'https://script.google.com/macros/s/AKfycbzJZVHlsTwQ_QyEyjVXR5lF4sLcTR2HCQdNIu8t0-4qWPJCU6k1fkpWhZSIw_k_ELAC/exec';
 
-    async function fetchEvents() {
-      try {
-        const res = await fetch(`${API_BASE}?mode=events&site=${site}`);
-        const contentType = res.headers.get("content-type") || "";
+    async function loadEvents() {
+      let site = document.getElementById('siteInput').value.trim();
+      if (!site) return alert('請輸入據點啟動碼');
+      if (!site.startsWith('@')) site = '@' + site; // 確保有 @
 
-        if (!res.ok || !contentType.includes("application/json")) {
-          throw new Error(`HTTP ${res.status}：無效回應格式`);
-        }
+      const res = await fetch(`${API_BASE}?mode=events`);
+      const events = await res.json();
 
-        const data = await res.json();
-        const eventSelect = document.getElementById('eventSelect');
+      const filtered = events.filter(ev => ev['備註']?.includes(site));
 
-        if (!Array.isArray(data) || data.length === 0) {
-          showDebug(`⚠️ 無活動資料：請確認「活動總表」是否有正確填寫以及是否包含據點名稱「${site}」`);
-          return;
-        }
+      const container = document.getElementById('eventList');
+      container.innerHTML = '';
 
-        data.forEach(ev => {
-          const opt = document.createElement('option');
-          opt.value = ev.活動ID;
-          opt.textContent = `${ev.活動日期}｜${ev.活動標題}`;
-          eventSelect.appendChild(opt);
-        });
-      } catch (err) {
-        showDebug(`❌ 無法載入活動：${err.message}`);
+      if (filtered.length === 0) {
+        container.innerHTML = '<p class="text-danger">查無活動</p>';
+        return;
       }
-    }
 
-    function showDebug(msg) {
-      const box = document.getElementById('debug-log');
-      box.classList.remove('d-none');
-      box.textContent = msg;
-    }
-
-    async function fetchSignups(eventId) {
-      const res = await fetch(`${API_BASE}?mode=querySignups&eventId=${eventId}&site=${site}`);
-      const data = await res.json();
-      const tbody = document.getElementById('signupTableBody');
-      tbody.innerHTML = '';
-      data.forEach(row => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${row.報名時間 || ''}</td>
-          <td>${row.姓名 || ''}</td>
-          <td>${row.LINE的名字 || ''}</td>
-          <td>${row.LINE_ID || ''}</td>
-          <td>${row.電子郵件 || ''}</td>
-          <td>${row.手機號碼 || ''}</td>
-          <td>${row.備註 || ''}</td>
-          <td>${row.活動ID || ''}</td>
-          <td>${row.出席狀態 || ''}</td>
-          <td>${row.性別 || ''}</td>
-        `;
-        tbody.appendChild(tr);
+      filtered.forEach(ev => {
+        const div = document.createElement('div');
+        div.className = 'card p-3 mb-2 event-card';
+        div.innerHTML = `<strong>${ev['活動標題']}</strong><br>講師：${ev['講師']}<br>時間：${ev['活動日期']} ${ev['開始時間']}`;
+        div.onclick = () => loadSignupRecords(ev['活動ID']);
+        container.appendChild(div);
       });
     }
 
-    function formatSignupSuccessMessage(eventTitle, eventDate, eventTime, location = '', userId = '') {
-      const msg = `📌 您已成功報名以下活動：\n\n《${eventTitle}》\n🗓 日期：${eventDate} ${eventTime}\n📍 地點：${location}\n\n我們將於活動前一天再次提醒您，歡迎準時參加！`;
-      console.log('🚀 將推送訊息給：', userId);
-      console.log('訊息內容：', msg);
-      return msg;
+    async function loadSignupRecords(activityId) {
+      const res = await fetch(`${API_BASE}?mode=records&activityId=${activityId}`);
+      const records = await res.json();
+
+      const tbody = document.getElementById('recordTableBody');
+      tbody.innerHTML = '';
+
+      records.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row['報名時間'] || ''}</td>
+          <td>${row['姓名'] || ''}</td>
+          <td>${row['LINE的名字'] || ''}</td>
+          <td>${row['LINE ID'] || ''}</td>
+          <td>${row['電子郵件'] || ''}</td>
+          <td>${row['手機號碼'] || ''}</td>
+          <td>${row['備註'] || ''}</td>
+          <td>${row['活動ID'] || ''}</td>
+          <td>${row['出席狀態'] || ''}</td>
+          <td>${row['性別'] || ''}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('recordSection').style.display = 'block';
     }
-
-    document.getElementById('eventSelect').addEventListener('change', e => {
-      fetchSignups(e.target.value);
-    });
-
-    document.getElementById('downloadBtn').addEventListener('click', () => {
-      const eventId = document.getElementById('eventSelect').value;
-      if (!eventId) return alert('請先選擇活動');
-      window.open(`${API_BASE}?mode=exportSignupsPDF&eventId=${eventId}&site=${site}`);
-    });
-
-    fetchEvents();
   </script>
 </body>
 </html>
