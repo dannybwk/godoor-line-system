@@ -1,458 +1,687 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>果多｜據點活動報名後台</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Microsoft JhengHei', Arial, sans-serif;
-            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-            font-size: 16px;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
-        }
-        
-        h1, h5 {
-            color: #f57c00;
-            font-weight: bold;
-        }
-        
-        .card {
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(245, 124, 0, 0.1);
-            margin-bottom: 20px;
-        }
-        
-        .card-header {
-            background: #ff9800;
-            color: white;
-            border-radius: 15px 15px 0 0 !important;
-            font-weight: bold;
-        }
-        
-        .event-card {
-            border: 2px solid #ffe0b2;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 15px;
-            background: white;
-            transition: all 0.3s ease;
-        }
-        
-        .event-card:hover {
-            border-color: #ff9800;
-            box-shadow: 0 4px 15px rgba(245, 124, 0, 0.2);
-        }
-        
-        .event-title {
-            color: #f57c00;
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        
-        .event-details {
-            color: #666;
-            font-size: 14px;
-            line-height: 1.4;
-        }
-        
-        .btn-warning {
-            background: #ff9800;
-            border: none;
-            font-weight: bold;
-            border-radius: 10px;
-        }
-        
-        .btn-warning:hover {
-            background: #f57c00;
-        }
-        
-        .btn-info {
-            background: #2196f3;
-            border: none;
-            font-weight: bold;
-            border-radius: 10px;
-        }
-        
-        .record-table {
-            font-size: 14px;
-        }
-        
-        .record-table th {
-            background: #fff3e0;
-            color: #f57c00;
-            font-weight: bold;
-            border: 1px solid #ffe0b2;
-        }
-        
-        .record-table td {
-            border: 1px solid #ffe0b2;
-        }
-        
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            color: #666;
-            font-size: 14px;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-        }
-        
-        .no-events {
-            text-align: center;
-            padding: 40px;
-            color: #999;
-            background: white;
-            border-radius: 15px;
-            margin: 20px 0;
-        }
-        
-        .registration-count {
-            background: #4caf50;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            margin-left: 10px;
-        }
-        
-        .registration-count.full {
-            background: #f44336;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>果多｜據點活動報名後台</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+body {
+    font-family: 'Microsoft JhengHei', Arial, sans-serif;
+    background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+    font-size: 16px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+}
+
+h1, h5 {
+    color: #f57c00;
+    font-weight: bold;
+}
+
+.card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(245, 124, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.card-header {
+    background: #ff9800;
+    color: white;
+    border-radius: 15px 15px 0 0 !important;
+    font-weight: bold;
+}
+
+.event-card {
+    border: 2px solid #ffe0b2;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 15px;
+    background: white;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.event-card:hover {
+    border-color: #ff9800;
+    box-shadow: 0 4px 15px rgba(245, 124, 0, 0.2);
+}
+
+.event-card.full {
+    border-color: #f44336;
+    background: #ffebee;
+}
+
+.event-card.warning {
+    border-color: #ff9800;
+    background: #fff8e1;
+}
+
+.event-title {
+    color: #f57c00;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.event-title.full {
+    color: #f44336;
+}
+
+.event-details {
+    color: #666;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.btn-warning {
+    background: #ff9800;
+    border: none;
+    font-weight: bold;
+    border-radius: 10px;
+}
+
+.btn-warning:hover {
+    background: #f57c00;
+}
+
+.btn-info {
+    background: #2196f3;
+    border: none;
+    font-weight: bold;
+    border-radius: 10px;
+}
+
+.record-table {
+    font-size: 14px;
+}
+
+.record-table th {
+    background: #fff3e0;
+    color: #f57c00;
+    font-weight: bold;
+    border: 1px solid #ffe0b2;
+}
+
+.record-table td {
+    border: 1px solid #ffe0b2;
+}
+
+.footer {
+    text-align: center;
+    margin-top: 40px;
+    color: #666;
+    font-size: 14px;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.no-events {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+    background: white;
+    border-radius: 15px;
+    margin: 20px 0;
+}
+
+.registration-count {
+    background: #4caf50;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+.registration-count.full {
+    background: #f44336;
+}
+
+.registration-count.warning {
+    background: #ff9800;
+}
+
+/* 額滿狀態指示器 */
+.status-indicator {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.status-available {
+    background: #4caf50;
+    color: white;
+}
+
+.status-warning {
+    background: #ff9800;
+    color: white;
+}
+
+.status-full {
+    background: #f44336;
+    color: white;
+}
+
+.status-unlimited {
+    background: #2196f3;
+    color: white;
+}
+
+/* 統計卡片 */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.stat-number {
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.stat-number.available {
+    color: #4caf50;
+}
+
+.stat-number.warning {
+    color: #ff9800;
+}
+
+.stat-number.full {
+    color: #f44336;
+}
+
+.stat-number.unlimited {
+    color: #2196f3;
+}
+
+.stat-label {
+    color: #666;
+    font-size: 14px;
+}
+
+/* 容量進度條 */
+.capacity-progress {
+    width: 100%;
+    height: 8px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    margin: 10px 0;
+    overflow: hidden;
+}
+
+.capacity-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.capacity-bar.available {
+    background: #4caf50;
+}
+
+.capacity-bar.warning {
+    background: #ff9800;
+}
+
+.capacity-bar.full {
+    background: #f44336;
+}
+
+.capacity-text {
+    font-size: 12px;
+    color: #666;
+    text-align: center;
+    margin-top: 5px;
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="text-center mb-4">🍊 果多｜據點活動報名後台</h1>
-        
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">📍 據點選擇</h5>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label for="siteInput" class="form-label">據點啟動碼（例如：@歡銀學堂）</label>
-                    <input type="text" class="form-control" id="siteInput" placeholder="請輸入據點名稱（請包含 @）">
-                </div>
-                <button class="btn btn-warning mb-4" onclick="loadEvents()">載入活動</button>
-            </div>
+<div class="container">
+<h1 class="text-center mb-4">🍊 果多｜據點活動報名後台</h1>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">📍 據點選擇</h5>
         </div>
-        
-        <div id="eventList" class="row row-cols-1 row-cols-md-2 g-3 mb-5"></div>
-        
-        <div id="recordSection" style="display:none">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">📊 報名紀錄</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-bordered record-table">
-                            <thead>
-                                <tr>
-                                    <th>報名時間</th>
-                                    <th>姓名</th>
-                                    <th>LINE名稱</th>
-                                    <th>LINE ID</th>
-                                    <th>電子郵件</th>
-                                    <th>手機號碼</th>
-                                    <th>備註</th>
-                                    <th>活動</th>
-                                    <th>出席狀態</th>
-                                    <th>性別</th>
-                                    <th>年齡</th>
-                                    <th>自訂回答</th>
-                                </tr>
-                            </thead>
-                            <tbody id="recordTableBody"></tbody>
-                        </table>
-                    </div>
-                    <div class="mt-3">
-                        <button class="btn btn-info" onclick="exportToPDF()">📄 匯出PDF</button>
-                        <button class="btn btn-warning" onclick="exportToCSV()">📊 匯出CSV</button>
-                    </div>
-                </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="siteInput" class="form-label">據點啟動碼（例如：@歡銀學堂）</label>
+                <input type="text" class="form-control" id="siteInput" placeholder="請輸入據點名稱（請包含 @）">
             </div>
-        </div>
-        
-        <div class="footer">
-            Powered by <span style="color:#f07f2f;font-weight:bold">果多</span><br>
-            <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" width="50" />
+            <button class="btn btn-warning mb-4" onclick="loadEvents()">載入活動</button>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script>
-        // 全域變數
-        let currentSite = '';
-        let allEvents = [];
-        let allRecords = [];
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxpDCRA2PJXLy8ssWwG3NO4QZzg87gmUdB1vHWjYNdf9jmz-ku0yfnovhtfz58ep0oE/exec';
-        
-        // 載入活動資料
-        async function loadEvents() {
-            const siteInput = document.getElementById('siteInput');
-            const site = siteInput.value.trim();
-            
-            if (!site) {
-                alert('請輸入據點啟動碼');
-                return;
-            }
-            
-            currentSite = site;
-            const eventList = document.getElementById('eventList');
-            eventList.innerHTML = '<div class="loading">載入中...</div>';
-            
-            try {
-                // 載入活動資料
-                const eventsResponse = await fetch(`${APPS_SCRIPT_URL}?mode=events&site=${encodeURIComponent(site)}`);
-                allEvents = await eventsResponse.json();
-                
-                // 載入報名資料
-                const signupsResponse = await fetch(`${APPS_SCRIPT_URL}?mode=querySignups&site=${encodeURIComponent(site)}`);
-                allRecords = await signupsResponse.json();
-                
-                renderEvents();
-                renderRecords();
-                
-            } catch (error) {
-                console.error('載入失敗:', error);
-                eventList.innerHTML = '<div class="alert alert-danger">載入失敗，請檢查網路連線或聯繫技術支援</div>';
-            }
+    <!-- 統計概覽 -->
+    <div id="statsOverview" class="stats-grid" style="display: none;">
+        <div class="stat-card">
+            <div class="stat-number available" id="availableCount">0</div>
+            <div class="stat-label">可報名活動</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number warning" id="warningCount">0</div>
+            <div class="stat-label">即將額滿</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number full" id="fullCount">0</div>
+            <div class="stat-label">已額滿活動</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number unlimited" id="unlimitedCount">0</div>
+            <div class="stat-label">無上限活動</div>
+        </div>
+    </div>
+
+    <div id="eventList" class="row row-cols-1 row-cols-md-2 g-3 mb-5"></div>
+
+    <div id="recordSection" style="display:none">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">📊 報名紀錄</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered record-table">
+                        <thead>
+                            <tr>
+                                <th>報名時間</th>
+                                <th>姓名</th>
+                                <th>LINE名稱</th>
+                                <th>LINE ID</th>
+                                <th>電子郵件</th>
+                                <th>手機號碼</th>
+                                <th>備註</th>
+                                <th>活動</th>
+                                <th>出席狀態</th>
+                                <th>性別</th>
+                                <th>年齡</th>
+                                <th>自訂回答</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recordTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-info" onclick="exportToPDF()">📄 匯出PDF</button>
+                    <button class="btn btn-warning" onclick="exportToCSV()">📊 匯出CSV</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Powered by <span style="color:#f07f2f;font-weight:bold">果多</span><br>
+        <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" width="50" />
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+    // 全域變數
+    let currentSite = '';
+    let allEvents = [];
+    let allRecords = [];
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxpDCRA2PJXLy8ssWwG3NO4QZzg87gmUdB1vHWjYNdf9jmz-ku0yfnovhtfz58ep0oE/exec';
+
+    // 載入活動資料
+    async function loadEvents() {
+        const siteInput = document.getElementById('siteInput');
+        const site = siteInput.value.trim();
+
+        if (!site) {
+            alert('請輸入據點啟動碼');
+            return;
         }
+
+        currentSite = site;
+        const eventList = document.getElementById('eventList');
+        eventList.innerHTML = '<div class="loading">載入中...</div>';
+
+        try {
+            // 載入活動資料（包含容量資訊）
+            const eventsResponse = await fetch(`${APPS_SCRIPT_URL}?mode=events&site=${encodeURIComponent(site)}`);
+            allEvents = await eventsResponse.json();
+
+            // 載入報名資料
+            const signupsResponse = await fetch(`${APPS_SCRIPT_URL}?mode=querySignups&site=${encodeURIComponent(site)}`);
+            allRecords = await signupsResponse.json();
+
+            renderStats();
+            renderEvents();
+            renderRecords();
+
+        } catch (error) {
+            console.error('載入失敗:', error);
+            eventList.innerHTML = '<div class="alert alert-danger">載入失敗，請檢查網路連線或聯繫技術支援</div>';
+        }
+    }
+
+    // 渲染統計概覽
+    function renderStats() {
+        const statsOverview = document.getElementById('statsOverview');
         
-        // 渲染活動列表
-        function renderEvents() {
-            const eventList = document.getElementById('eventList');
+        if (!allEvents || allEvents.length === 0) {
+            statsOverview.style.display = 'none';
+            return;
+        }
+
+        let availableCount = 0;
+        let warningCount = 0;
+        let fullCount = 0;
+        let unlimitedCount = 0;
+
+        allEvents.forEach(event => {
+            const hasLimit = event['活動人數上限'] && !isNaN(parseInt(event['活動人數上限']));
             
-            if (!allEvents || allEvents.length === 0) {
-                eventList.innerHTML = '<div class="no-events">此據點目前沒有活動</div>';
-                return;
+            if (!hasLimit) {
+                unlimitedCount++;
+            } else if (event.isFull) {
+                fullCount++;
+            } else if (event.remainingSlots <= 3) {
+                warningCount++;
+            } else {
+                availableCount++;
             }
+        });
+
+        document.getElementById('availableCount').textContent = availableCount;
+        document.getElementById('warningCount').textContent = warningCount;
+        document.getElementById('fullCount').textContent = fullCount;
+        document.getElementById('unlimitedCount').textContent = unlimitedCount;
+
+        statsOverview.style.display = 'grid';
+    }
+
+    // 渲染活動列表
+    function renderEvents() {
+        const eventList = document.getElementById('eventList');
+
+        if (!allEvents || allEvents.length === 0) {
+            eventList.innerHTML = '<div class="no-events">此據點目前沒有活動</div>';
+            return;
+        }
+
+        const html = allEvents.map(event => {
+            const eventId = event['活動ID'];
+            const currentCount = event.currentRegistrations || 0;
+            const limit = event['活動人數上限'];
+            const hasLimit = limit && !isNaN(parseInt(limit));
+            const isFull = event.isFull;
+            const remainingSlots = event.remainingSlots;
             
-            // 計算每個活動的報名人數
-            const registrationCounts = {};
-            allRecords.forEach(record => {
-                const eventId = record['活動ID'];
-                registrationCounts[eventId] = (registrationCounts[eventId] || 0) + 1;
-            });
-            
-            const html = allEvents.map(event => {
-                const eventId = event['活動ID'];
-                const currentCount = registrationCounts[eventId] || 0;
-                const limit = event['活動人數上限'];
-                const isFull = limit && currentCount >= parseInt(limit);
-                
-                let capacityBadge = '';
-                if (limit) {
-                    capacityBadge = `<span class="registration-count ${isFull ? 'full' : ''}">${currentCount}/${limit}</span>`;
-                } else {
-                    capacityBadge = `<span class="registration-count">${currentCount}</span>`;
-                }
-                
-                return `
-                    <div class="col">
-                        <div class="event-card">
-                            <div class="event-title">
-                                ${event['活動標題']} ${capacityBadge}
-                            </div>
-                            <div class="event-details">
-                                <div><strong>活動ID:</strong> ${eventId}</div>
-                                <div><strong>講師:</strong> ${event['講師'] || '未設定'}</div>
-                                <div><strong>日期:</strong> ${formatDate(event['活動日期'])}</div>
-                                <div><strong>時間:</strong> ${event['開始時間']} ${event['結束時間'] ? '- ' + event['結束時間'] : ''}</div>
-                                <div><strong>地點:</strong> ${event['地址或地點說明'] || '未設定'}</div>
-                                ${event['活動內容'] ? `<div><strong>內容:</strong> ${event['活動內容']}</div>` : ''}
-                                ${event['備註'] ? `<div><strong>備註:</strong> ${event['備註']}</div>` : ''}
-                                ${event['自訂欄位問題'] ? `<div><strong>自訂問題:</strong> ${event['自訂欄位問題']}</div>` : ''}
-                            </div>
-                            <div class="mt-3">
-                                <button class="btn btn-info btn-sm" onclick="showEventRecords('${eventId}')">
-                                    查看報名 (${currentCount}人)
-                                </button>
-                            </div>
+            // 決定狀態樣式
+            let statusClass = '';
+            let statusText = '';
+            let cardClass = '';
+            let capacityBadgeClass = '';
+
+            if (!hasLimit) {
+                statusClass = 'status-unlimited';
+                statusText = '無上限';
+                capacityBadgeClass = 'registration-count';
+            } else if (isFull) {
+                statusClass = 'status-full';
+                statusText = '已額滿';
+                cardClass = 'full';
+                capacityBadgeClass = 'registration-count full';
+            } else if (remainingSlots <= 3) {
+                statusClass = 'status-warning';
+                statusText = `剩${remainingSlots}名額`;
+                cardClass = 'warning';
+                capacityBadgeClass = 'registration-count warning';
+            } else {
+                statusClass = 'status-available';
+                statusText = '可報名';
+                capacityBadgeClass = 'registration-count';
+            }
+
+            // 容量進度條
+            let progressBar = '';
+            if (hasLimit) {
+                const percentage = Math.min((currentCount / parseInt(limit)) * 100, 100);
+                let progressClass = 'available';
+                if (isFull) progressClass = 'full';
+                else if (remainingSlots <= 3) progressClass = 'warning';
+
+                progressBar = `
+                    <div class="capacity-progress">
+                        <div class="capacity-bar ${progressClass}" style="width: ${percentage}%"></div>
+                    </div>
+                    <div class="capacity-text">${currentCount}/${limit} 人報名 (${percentage.toFixed(1)}%)</div>
+                `;
+            } else {
+                progressBar = `<div class="capacity-text">${currentCount} 人報名（無上限）</div>`;
+            }
+
+            return `
+                <div class="col">
+                    <div class="event-card ${cardClass}">
+                        <div class="status-indicator ${statusClass}">
+                            ${statusText}
+                        </div>
+                        
+                        <div class="event-title ${isFull ? 'full' : ''}">
+                            ${event['活動標題']}
+                            <span class="${capacityBadgeClass}">${hasLimit ? `${currentCount}/${limit}` : currentCount}</span>
+                        </div>
+                        
+                        ${progressBar}
+                        
+                        <div class="event-details">
+                            <div><strong>活動ID:</strong> ${eventId}</div>
+                            <div><strong>講師:</strong> ${event['講師'] || '未設定'}</div>
+                            <div><strong>日期:</strong> ${formatDate(event['活動日期'])}</div>
+                            <div><strong>時間:</strong> ${event['開始時間']} ${event['結束時間'] ? '- ' + event['結束時間'] : ''}</div>
+                            <div><strong>地點:</strong> ${event['地址或地點說明'] || '未設定'}</div>
+                            ${event['活動內容'] ? `<div><strong>內容:</strong> ${event['活動內容']}</div>` : ''}
+                            ${event['備註'] ? `<div><strong>備註:</strong> ${event['備註']}</div>` : ''}
+                            ${event['自訂欄位問題'] ? `<div><strong>自訂問題:</strong> ${event['自訂欄位問題']}</div>` : ''}
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-info btn-sm" onclick="showEventRecords('${eventId}')">
+                                查看報名 (${currentCount}人)
+                            </button>
+                            ${isFull ? '<span class="badge bg-danger ms-2">已額滿</span>' : ''}
+                            ${!hasLimit ? '<span class="badge bg-primary ms-2">無上限</span>' : ''}
+                            ${hasLimit && !isFull && remainingSlots <= 3 ? '<span class="badge bg-warning ms-2">即將額滿</span>' : ''}
                         </div>
                     </div>
-                `;
-            }).join('');
-            
-            eventList.innerHTML = html;
+                </div>
+            `;
+        }).join('');
+
+        eventList.innerHTML = html;
+    }
+
+    // 渲染報名紀錄
+    function renderRecords(eventId = null) {
+        const recordSection = document.getElementById('recordSection');
+        const recordTableBody = document.getElementById('recordTableBody');
+
+        let recordsToShow = allRecords;
+
+        // 如果指定了特定活動，只顯示該活動的報名
+        if (eventId) {
+            recordsToShow = allRecords.filter(record => record['活動ID'] === eventId);
         }
-        
-        // 渲染報名紀錄
-        function renderRecords(eventId = null) {
-            const recordSection = document.getElementById('recordSection');
-            const recordTableBody = document.getElementById('recordTableBody');
-            
-            let recordsToShow = allRecords;
-            
-            // 如果指定了特定活動，只顯示該活動的報名
-            if (eventId) {
-                recordsToShow = allRecords.filter(record => record['活動ID'] === eventId);
+
+        if (recordsToShow.length === 0) {
+            recordSection.style.display = 'none';
+            return;
+        }
+
+        const html = recordsToShow.map(record => `
+            <tr>
+                <td>${formatDateTime(record['報名時間'])}</td>
+                <td>${record['姓名'] || ''}</td>
+                <td>${record['LINE上的名字'] || ''}</td>
+                <td>${record['LINE ID'] || ''}</td>
+                <td>${record['電子郵件'] || ''}</td>
+                <td>${record['手機號碼'] || ''}</td>
+                <td>${record['備註'] || ''}</td>
+                <td>${record['活動標題'] || record['活動ID']}</td>
+                <td>${record['出席狀態'] || '未確認'}</td>
+                <td>${record['性別'] || ''}</td>
+                <td>${record['年齡'] || ''}</td>
+                <td>${record['自訂欄位回答'] || ''}</td>
+            </tr>
+        `).join('');
+
+        recordTableBody.innerHTML = html;
+        recordSection.style.display = 'block';
+
+        // 滾動到報名紀錄區域
+        recordSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // 顯示特定活動的報名紀錄
+    function showEventRecords(eventId) {
+        renderRecords(eventId);
+    }
+
+    // 匯出為 PDF
+    function exportToPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        // 設定中文字體（如果需要）
+        doc.setFont('helvetica');
+        doc.setFontSize(16);
+        doc.text(`${currentSite} 報名紀錄`, 20, 20);
+
+        doc.setFontSize(10);
+        let yPosition = 40;
+
+        // 添加表格標題
+        const headers = ['報名時間', '姓名', '手機', '活動', '出席狀態'];
+        let xPosition = 20;
+
+        headers.forEach((header, index) => {
+            doc.text(header, xPosition, yPosition);
+            xPosition += 35;
+        });
+
+        yPosition += 10;
+
+        // 添加資料
+        allRecords.forEach(record => {
+            if (yPosition > 280) { // 換頁
+                doc.addPage();
+                yPosition = 20;
             }
-            
-            if (recordsToShow.length === 0) {
-                recordSection.style.display = 'none';
-                return;
-            }
-            
-            const html = recordsToShow.map(record => `
-                <tr>
-                    <td>${formatDateTime(record['報名時間'])}</td>
-                    <td>${record['姓名'] || ''}</td>
-                    <td>${record['LINE上的名字'] || ''}</td>
-                    <td>${record['LINE ID'] || ''}</td>
-                    <td>${record['電子郵件'] || ''}</td>
-                    <td>${record['手機號碼'] || ''}</td>
-                    <td>${record['備註'] || ''}</td>
-                    <td>${record['活動標題'] || record['活動ID']}</td>
-                    <td>${record['出席狀態'] || '未確認'}</td>
-                    <td>${record['性別'] || ''}</td>
-                    <td>${record['年齡'] || ''}</td>
-                    <td>${record['自訂欄位回答'] || ''}</td>
-                </tr>
-            `).join('');
-            
-            recordTableBody.innerHTML = html;
-            recordSection.style.display = 'block';
-            
-            // 滾動到報名紀錄區域
-            recordSection.scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        // 顯示特定活動的報名紀錄
-        function showEventRecords(eventId) {
-            renderRecords(eventId);
-        }
-        
-        // 匯出為 PDF
-        function exportToPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            // 設定中文字體（如果需要）
-            doc.setFont('helvetica');
-            doc.setFontSize(16);
-            doc.text(`${currentSite} 報名紀錄`, 20, 20);
-            
-            doc.setFontSize(10);
-            let yPosition = 40;
-            
-            // 添加表格標題
-            const headers = ['報名時間', '姓名', '手機', '活動', '出席狀態'];
-            let xPosition = 20;
-            
-            headers.forEach((header, index) => {
-                doc.text(header, xPosition, yPosition);
+
+            xPosition = 20;
+            const rowData = [
+                formatDateTime(record['報名時間']),
+                record['姓名'] || '',
+                record['手機號碼'] || '',
+                record['活動標題'] || record['活動ID'],
+                record['出席狀態'] || '未確認'
+            ];
+
+            rowData.forEach(data => {
+                doc.text(String(data).substring(0, 10), xPosition, yPosition);
                 xPosition += 35;
             });
-            
-            yPosition += 10;
-            
-            // 添加資料
-            allRecords.forEach(record => {
-                if (yPosition > 280) { // 換頁
-                    doc.addPage();
-                    yPosition = 20;
-                }
-                
-                xPosition = 20;
-                const rowData = [
-                    formatDateTime(record['報名時間']),
-                    record['姓名'] || '',
-                    record['手機號碼'] || '',
-                    record['活動標題'] || record['活動ID'],
-                    record['出席狀態'] || '未確認'
-                ];
-                
-                rowData.forEach(data => {
-                    doc.text(String(data).substring(0, 10), xPosition, yPosition);
-                    xPosition += 35;
-                });
-                
-                yPosition += 8;
-            });
-            
-            doc.save(`${currentSite}_報名紀錄_${formatDate(new Date())}.pdf`);
-        }
-        
-        // 匯出為 CSV
-        function exportToCSV() {
-            const headers = [
-                '報名時間', '姓名', 'LINE名稱', 'LINE ID', '電子郵件', 
-                '手機號碼', '備註', '活動ID', '活動標題', '出席狀態', 
-                '性別', '年齡', '自訂欄位回答'
-            ];
-            
-            let csvContent = headers.join(',') + '\n';
-            
-            allRecords.forEach(record => {
-                const row = headers.map(header => {
-                    const value = record[header] || '';
-                    // 處理包含逗號的內容
-                    return `"${String(value).replace(/"/g, '""')}"`;
-                });
-                csvContent += row.join(',') + '\n';
-            });
-            
-            // 下載檔案
-            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `${currentSite}_報名紀錄_${formatDate(new Date())}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-        
-        // 日期格式化
-        function formatDate(dateStr) {
-            if (!dateStr) return '';
-            const date = new Date(dateStr);
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}/${month}/${day}`;
-        }
-        
-        // 日期時間格式化
-        function formatDateTime(dateTimeStr) {
-            if (!dateTimeStr) return '';
-            const date = new Date(dateTimeStr);
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            return `${year}/${month}/${day} ${hours}:${minutes}`;
-        }
-        
-        // 頁面載入時自動聚焦到輸入框
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('siteInput').focus();
-            
-            // 支援 Enter 鍵快速載入
-            document.getElementById('siteInput').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    loadEvents();
-                }
-            });
+
+            yPosition += 8;
         });
-    </script>
+
+        doc.save(`${currentSite}_報名紀錄_${formatDate(new Date())}.pdf`);
+    }
+
+    // 匯出為 CSV
+    function exportToCSV() {
+        const headers = [
+            '報名時間', '姓名', 'LINE名稱', 'LINE ID', '電子郵件',
+            '手機號碼', '備註', '活動ID', '活動標題', '出席狀態',
+            '性別', '年齡', '自訂欄位回答'
+        ];
+
+        let csvContent = headers.join(',') + '\n';
+
+        allRecords.forEach(record => {
+            const row = headers.map(header => {
+                const value = record[header] || '';
+                // 處理包含逗號的內容
+                return `"${String(value).replace(/"/g, '""')}"`;
+            });
+            csvContent += row.join(',') + '\n';
+        });
+
+        // 下載檔案
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `${currentSite}_報名紀錄_${formatDate(new Date())}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // 日期格式化
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}/${month}/${day}`;
+    }
+
+    // 日期時間格式化
+    function formatDateTime(dateTimeStr) {
+        if (!dateTimeStr) return '';
+        const date = new Date(dateTimeStr);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}/${month}/${day} ${hours}:${minutes}`;
+    }
+
+    // 頁面載入時自動聚焦到輸入框
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('siteInput').focus();
+
+        // 支援 Enter 鍵快速載入
+        document.getElementById('siteInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                loadEvents();
+            }
+        });
+    });
+</script>
 </body>
 </html>
