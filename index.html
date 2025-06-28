@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>課程報名系統</title>
+<title>活動報名系統</title>
+    <!-- LIFF SDK -->
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
 * {
     margin: 0;
@@ -577,7 +579,8 @@ body {
                 <label class="form-label">備註</label>
                 <textarea class="form-control" name="note" rows="3" placeholder="如有特殊需求或想要補充的資訊，請在此填寫"></textarea>
             </div>
-
+            <!-- 隱藏的 LINE ID 欄位 -->
+                <input type="hidden" name="lineId" id="lineIdField">
             <!-- 自訂欄位區域 -->
             <div id="customFields" class="hidden"></div>
 
@@ -592,10 +595,15 @@ body {
 // 配置
 const API_URL = 'https://script.google.com/macros/s/AKfycbxpDCRA2PJXLy8ssWwG3NO4QZzg87gmUdB1vHWjYNdf9jmz-ku0yfnovhtfz58ep0oE/exec';
 
+// LIFF 配置
+const LIFF_ID = '2007618883-ewZnj9Py'; // 請替換為實際的 LIFF ID
+let userProfile = null;
+let isLiffReady = false;
+
 // 狀態
 let events = [];
 let selectedEventIds = [];
-let currentView = 'list'; // 'list' 或 'calendar'
+let currentView = 'list';
 let currentDate = new Date();
 
 // 從 URL 獲取據點參數
@@ -617,6 +625,9 @@ document.addEventListener('DOMContentLoaded', function() {
     loadEvents();
     setupForm();
     updateViewButtons();
+    
+    // 新增：初始化 LIFF
+    initializeLiff();
 });
 
 // 載入活動
@@ -1085,11 +1096,15 @@ function setupForm() {
                 // 收集自訂欄位回答
                 const customAnswer = formData.get(`custom_${eventId}`) || '';
 
+                // 取得 LINE ID（如果有的話）
+                const lineId = document.getElementById('lineIdField')?.value || '';
+
                 const data = new URLSearchParams({
                     action: 'register',
                     eventId: eventId,
                     name: formData.get('name'),
                     lineName: formData.get('lineName'),
+                    lineId: lineId, // 新增：傳送 LINE ID
                     phone: formData.get('phone'),
                     email: formData.get('email'),
                     gender: formData.get('gender'),
@@ -1097,6 +1112,13 @@ function setupForm() {
                     note: formData.get('note'),
                     customFieldAnswer: customAnswer
                 });
+
+// 記錄提交資料（除錯用）
+console.log('📤 提交資料包含 LINE ID:', {
+    name: formData.get('name'),
+    lineId: lineId ? '有' : '無',
+    isLiff: isLiffReady
+});
 
                 const response = await fetch(API_URL, {
                     method: 'POST',
@@ -1259,7 +1281,65 @@ document.addEventListener('visibilitychange', function() {
 
 // 設定初始載入時間
 localStorage.setItem('lastEventLoad', Date.now().toString());
+/**
+ * LIFF 相關函式
+ */
+async function initializeLiff() {
+    try {
+        console.log('🔄 檢查 LIFF 環境...');
+        
+        if (typeof liff === 'undefined') {
+            console.log('⚠️ 不在 LIFF 環境中，使用一般模式');
+            return;
+        }
+        
+        await liff.init({ liffId: LIFF_ID });
+        
+        if (liff.isLoggedIn()) {
+            console.log('✅ LIFF 登入成功');
+            await getUserProfile();
+            isLiffReady = true;
+            showLiffStatus();
+        } else {
+            console.log('❌ LIFF 未登入，嘗試登入...');
+            liff.login();
+        }
+        
+    } catch (error) {
+        console.error('❌ LIFF 初始化失敗:', error);
+    }
+}
 
+async function getUserProfile() {
+    try {
+        userProfile = await liff.getProfile();
+        console.log('👤 LIFF 使用者資料:', userProfile);
+        
+        const lineNameField = document.querySelector('input[name="lineName"]');
+        const lineIdField = document.getElementById('lineIdField');
+        
+        if (lineNameField && userProfile.displayName) {
+            lineNameField.value = userProfile.displayName;
+            lineNameField.readOnly = true;
+        }
+        
+        if (lineIdField && userProfile.userId) {
+            lineIdField.value = userProfile.userId;
+        }
+        
+        console.log('✅ LIFF 使用者資料已自動填入');
+        
+    } catch (error) {
+        console.error('❌ 取得 LIFF 使用者資料失敗:', error);
+    }
+}
+
+function showLiffStatus() {
+    const header = document.querySelector('.header p');
+    if (header && userProfile) {
+        header.innerHTML = `選擇您想參加的課程<br><small style="color: rgba(255,255,255,0.8);">👋 歡迎，${userProfile.displayName}！已連接到您的 LINE 帳號</small>`;
+    }
+}
 </script>
 </body>
 </html>
