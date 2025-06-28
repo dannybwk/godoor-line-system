@@ -102,6 +102,55 @@ body {
     color: white;
 }
 
+/* 額滿相關樣式 */
+.btn-disabled {
+    background: #ccc !important;
+    color: #666 !important;
+    cursor: not-allowed !important;
+    border-color: #ccc !important;
+}
+
+.capacity-info {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.capacity-available {
+    background: #4caf50;
+    color: white;
+}
+
+.capacity-warning {
+    background: #ff9800;
+    color: white;
+}
+
+.capacity-full {
+    background: #f44336;
+    color: white;
+}
+
+.full-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(244, 67, 54, 0.9);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 12px;
+    z-index: 10;
+}
+
 /* 月曆樣式 */
 .calendar-container {
     background: white;
@@ -193,6 +242,7 @@ body {
     cursor: pointer;
     transition: all 0.2s;
     margin-bottom: 3px;
+    position: relative;
 }
 
 .calendar-event:hover {
@@ -203,6 +253,15 @@ body {
 .calendar-event.selected {
     background: #4caf50;
     box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+}
+
+.calendar-event.full {
+    background: #f44336;
+    cursor: not-allowed;
+}
+
+.calendar-event.warning {
+    background: #ff9800;
 }
 
 /* 列表樣式 */
@@ -218,6 +277,7 @@ body {
     padding: 24px;
     cursor: pointer;
     transition: all 0.2s;
+    position: relative;
 }
 
 .event-card:hover {
@@ -229,6 +289,17 @@ body {
     border-color: #4caf50;
     background: #f1f8e9;
     box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+}
+
+.event-card.full {
+    background: #ffebee;
+    border-color: #f44336;
+    cursor: not-allowed;
+}
+
+.event-card.full:hover {
+    border-color: #f44336;
+    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.15);
 }
 
 .event-header {
@@ -245,12 +316,22 @@ body {
     flex-shrink: 0;
 }
 
+.event-checkbox:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .event-title {
     font-size: 20px;
     font-weight: 600;
     color: #ff9800;
     margin: 0;
     line-height: 1.3;
+    flex-grow: 1;
+}
+
+.event-title.full {
+    color: #f44336;
 }
 
 .event-details {
@@ -383,7 +464,7 @@ body {
     }
 
     .form-control {
-        font-size: 18px; /* 防止 iOS 縮放 */
+        font-size: 18px;
     }
 }
 
@@ -508,584 +589,677 @@ body {
 </div>
 
 <script>
-    // 配置
-    const API_URL = 'https://script.google.com/macros/s/AKfycbxpDCRA2PJXLy8ssWwG3NO4QZzg87gmUdB1vHWjYNdf9jmz-ku0yfnovhtfz58ep0oE/exec';
+// 配置
+const API_URL = 'https://script.google.com/macros/s/AKfycbxpDCRA2PJXLy8ssWwG3NO4QZzg87gmUdB1vHWjYNdf9jmz-ku0yfnovhtfz58ep0oE/exec';
 
-    // 狀態
-    let events = [];
-    let selectedEventIds = [];
-    let currentView = 'list'; // 'list' 或 'calendar'
-    let currentDate = new Date();
+// 狀態
+let events = [];
+let selectedEventIds = [];
+let currentView = 'list'; // 'list' 或 'calendar'
+let currentDate = new Date();
 
-    // 從 URL 獲取據點參數
-    const urlParams = new URLSearchParams(window.location.search);
-    const siteKeyword = urlParams.get('site') || '';
+// 從 URL 獲取據點參數
+const urlParams = new URLSearchParams(window.location.search);
+const siteKeyword = urlParams.get('site') || '';
 
-    // 初始化
-    document.addEventListener('DOMContentLoaded', function() {
-        if (siteKeyword) {
-            document.getElementById('siteInfo').classList.remove('hidden');
-            document.getElementById('currentSite').textContent = siteKeyword;
-            
-            // 顯示據點名稱大標題
-            const siteTitleHeader = document.getElementById('siteTitleHeader');
-            siteTitleHeader.textContent = siteKeyword;
-            siteTitleHeader.classList.remove('hidden');
+// 初始化
+document.addEventListener('DOMContentLoaded', function() {
+    if (siteKeyword) {
+        document.getElementById('siteInfo').classList.remove('hidden');
+        document.getElementById('currentSite').textContent = siteKeyword;
+
+        // 顯示據點名稱大標題
+        const siteTitleHeader = document.getElementById('siteTitleHeader');
+        siteTitleHeader.textContent = siteKeyword;
+        siteTitleHeader.classList.remove('hidden');
+    }
+
+    loadEvents();
+    setupForm();
+    updateViewButtons();
+});
+
+// 載入活動
+async function loadEvents() {
+    const container = document.getElementById('eventsContainer');
+    container.innerHTML = '<div class="loading">載入中...</div>';
+
+    try {
+        const url = `${API_URL}?mode=events&site=${encodeURIComponent(siteKeyword)}`;
+        console.log('載入 URL:', url);
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
         }
 
-        loadEvents();
-        setupForm();
-        updateViewButtons();
+        const data = await response.json();
+        console.log('收到資料:', data);
+
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
+        events = Array.isArray(data) ? data : data.events || [];
+        console.log('活動數量:', events.length);
+
+        // 根據當前檢視模式渲染
+        if (currentView === 'calendar') {
+            renderCalendar();
+        } else {
+            renderEventsList();
+        }
+
+    } catch (error) {
+        console.error('載入錯誤:', error);
+        container.innerHTML = `
+            <div class="error">
+                <h4>載入失敗</h4>
+                <p>錯誤：${error.message}</p>
+                <p>請檢查網路連線或稍後再試</p>
+                <button class="btn btn-primary" onclick="loadEvents()">重新載入</button>
+            </div>
+        `;
+    }
+}
+
+// 切換到月曆檢視
+function switchToCalendar() {
+    currentView = 'calendar';
+    updateViewButtons();
+    document.getElementById('listView').classList.add('hidden');
+    document.getElementById('calendarView').classList.remove('hidden');
+    renderCalendar();
+}
+
+// 切換到列表檢視
+function switchToList() {
+    currentView = 'list';
+    updateViewButtons();
+    document.getElementById('calendarView').classList.add('hidden');
+    document.getElementById('listView').classList.remove('hidden');
+    renderEventsList();
+}
+
+// 更新檢視按鈕狀態
+function updateViewButtons() {
+    const calendarBtn = document.getElementById('calendarViewBtn');
+    const listBtn = document.getElementById('listViewBtn');
+
+    if (currentView === 'calendar') {
+        calendarBtn.classList.add('btn-active');
+        calendarBtn.classList.remove('btn-outline');
+        listBtn.classList.add('btn-outline');
+        listBtn.classList.remove('btn-active');
+    } else {
+        listBtn.classList.add('btn-active');
+        listBtn.classList.remove('btn-outline');
+        calendarBtn.classList.add('btn-outline');
+        calendarBtn.classList.remove('btn-active');
+    }
+}
+
+// 渲染月曆
+function renderCalendar() {
+    const monthDisplay = document.getElementById('currentMonth');
+    const calendarGrid = document.getElementById('calendarGrid');
+
+    // 設定月份顯示
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    monthDisplay.textContent = `${year}年 ${month + 1}月`;
+
+    // 清空現有內容
+    calendarGrid.innerHTML = '';
+
+    // 建立星期標題
+    const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+    weekdays.forEach(day => {
+        const weekdayDiv = document.createElement('div');
+        weekdayDiv.className = 'calendar-weekday';
+        weekdayDiv.textContent = day;
+        calendarGrid.appendChild(weekdayDiv);
     });
 
-    // 載入活動
-    async function loadEvents() {
-        const container = document.getElementById('eventsContainer');
-        container.innerHTML = '<div class="loading">載入中...</div>';
+    // 取得本月第一天和最後一天
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const firstDayWeekday = firstDay.getDay();
+    const daysInMonth = lastDay.getDate();
 
-        try {
-            const url = `${API_URL}?mode=events&site=${encodeURIComponent(siteKeyword)}`;
-            console.log('載入 URL:', url);
+    // 取得上個月的最後幾天
+    const prevMonth = new Date(year, month, 0);
+    const daysInPrevMonth = prevMonth.getDate();
 
-            const response = await fetch(url);
+    // 填入上個月的日期
+    for (let i = firstDayWeekday - 1; i >= 0; i--) {
+        const dayDiv = createCalendarDay(daysInPrevMonth - i, true);
+        calendarGrid.appendChild(dayDiv);
+    }
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+    // 填入本月的日期
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dayDiv = createCalendarDay(day, false);
+        calendarGrid.appendChild(dayDiv);
+    }
+
+    // 填入下個月的日期
+    const totalCells = calendarGrid.children.length - 7; // 減去星期標題
+    const remainingCells = 42 - totalCells; // 6週 * 7天 = 42格
+    for (let day = 1; day <= remainingCells; day++) {
+        const dayDiv = createCalendarDay(day, true);
+        calendarGrid.appendChild(dayDiv);
+    }
+}
+
+// 建立月曆日期格子
+function createCalendarDay(dayNumber, isOtherMonth) {
+    const dayDiv = document.createElement('div');
+    dayDiv.className = 'calendar-day';
+
+    if (isOtherMonth) {
+        dayDiv.classList.add('other-month');
+    }
+
+    // 檢查是否為今天
+    const today = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+
+    if (!isOtherMonth &&
+        today.getDate() === dayNumber &&
+        today.getMonth() === currentMonth &&
+        today.getFullYear() === currentYear) {
+        dayDiv.classList.add('today');
+    }
+
+    // 建立日期數字
+    const dayNumberDiv = document.createElement('div');
+    dayNumberDiv.className = 'day-number';
+    dayNumberDiv.textContent = dayNumber;
+    dayDiv.appendChild(dayNumberDiv);
+
+    // 建立活動列表
+    const eventsDiv = document.createElement('div');
+    eventsDiv.className = 'day-events';
+
+    if (!isOtherMonth) {
+        // 尋找該日的活動
+        const dayEvents = findEventsForDate(currentYear, currentMonth, dayNumber);
+        dayEvents.forEach(event => {
+            const eventDiv = document.createElement('div');
+            eventDiv.className = 'calendar-event';
+            
+            // 檢查額滿狀態
+            if (event.isFull) {
+                eventDiv.classList.add('full');
+            } else if (event.remainingSlots !== null && event.remainingSlots <= 3) {
+                eventDiv.classList.add('warning');
+            }
+            
+            if (selectedEventIds.includes(event['活動ID']) && !event.isFull) {
+                eventDiv.classList.add('selected');
             }
 
-            const data = await response.json();
-            console.log('收到資料:', data);
-
-            if (data.error) {
-                throw new Error(data.error);
-            }
-
-            events = Array.isArray(data) ? data : data.events || [];
-            console.log('活動數量:', events.length);
-
-            // 根據當前檢視模式渲染
-            if (currentView === 'calendar') {
-                renderCalendar();
-            } else {
-                renderEventsList();
-            }
-
-        } catch (error) {
-            console.error('載入錯誤:', error);
-            container.innerHTML = `
-                <div class="error">
-                    <h4>載入失敗</h4>
-                    <p>錯誤：${error.message}</p>
-                    <p>請檢查網路連線或稍後再試</p>
-                    <button class="btn btn-primary" onclick="loadEvents()">重新載入</button>
-                </div>
-            `;
-        }
-    }
-
-    // 切換到月曆檢視
-    function switchToCalendar() {
-        currentView = 'calendar';
-        updateViewButtons();
-        document.getElementById('listView').classList.add('hidden');
-        document.getElementById('calendarView').classList.remove('hidden');
-        renderCalendar();
-    }
-
-    // 切換到列表檢視
-    function switchToList() {
-        currentView = 'list';
-        updateViewButtons();
-        document.getElementById('calendarView').classList.add('hidden');
-        document.getElementById('listView').classList.remove('hidden');
-        renderEventsList();
-    }
-
-    // 更新檢視按鈕狀態
-    function updateViewButtons() {
-        const calendarBtn = document.getElementById('calendarViewBtn');
-        const listBtn = document.getElementById('listViewBtn');
-        
-        if (currentView === 'calendar') {
-            calendarBtn.classList.add('btn-active');
-            calendarBtn.classList.remove('btn-outline');
-            listBtn.classList.add('btn-outline');
-            listBtn.classList.remove('btn-active');
-        } else {
-            listBtn.classList.add('btn-active');
-            listBtn.classList.remove('btn-outline');
-            calendarBtn.classList.add('btn-outline');
-            calendarBtn.classList.remove('btn-active');
-        }
-    }
-
-    // 渲染月曆
-    function renderCalendar() {
-        const monthDisplay = document.getElementById('currentMonth');
-        const calendarGrid = document.getElementById('calendarGrid');
-        
-        // 設定月份顯示
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth();
-        monthDisplay.textContent = `${year}年 ${month + 1}月`;
-
-        // 清空現有內容
-        calendarGrid.innerHTML = '';
-
-        // 建立星期標題
-        const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-        weekdays.forEach(day => {
-            const weekdayDiv = document.createElement('div');
-            weekdayDiv.className = 'calendar-weekday';
-            weekdayDiv.textContent = day;
-            calendarGrid.appendChild(weekdayDiv);
-        });
-
-        // 取得本月第一天和最後一天
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-        const firstDayWeekday = firstDay.getDay();
-        const daysInMonth = lastDay.getDate();
-
-        // 取得上個月的最後幾天
-        const prevMonth = new Date(year, month, 0);
-        const daysInPrevMonth = prevMonth.getDate();
-
-        // 填入上個月的日期
-        for (let i = firstDayWeekday - 1; i >= 0; i--) {
-            const dayDiv = createCalendarDay(daysInPrevMonth - i, true);
-            calendarGrid.appendChild(dayDiv);
-        }
-
-        // 填入本月的日期
-        for (let day = 1; day <= daysInMonth; day++) {
-            const dayDiv = createCalendarDay(day, false);
-            calendarGrid.appendChild(dayDiv);
-        }
-
-        // 填入下個月的日期
-        const totalCells = calendarGrid.children.length - 7; // 減去星期標題
-        const remainingCells = 42 - totalCells; // 6週 * 7天 = 42格
-        for (let day = 1; day <= remainingCells; day++) {
-            const dayDiv = createCalendarDay(day, true);
-            calendarGrid.appendChild(dayDiv);
-        }
-    }
-
-    // 建立月曆日期格子
-    function createCalendarDay(dayNumber, isOtherMonth) {
-        const dayDiv = document.createElement('div');
-        dayDiv.className = 'calendar-day';
-        
-        if (isOtherMonth) {
-            dayDiv.classList.add('other-month');
-        }
-
-        // 檢查是否為今天
-        const today = new Date();
-        const currentYear = currentDate.getFullYear();
-        const currentMonth = currentDate.getMonth();
-        
-        if (!isOtherMonth && 
-            today.getDate() === dayNumber && 
-            today.getMonth() === currentMonth && 
-            today.getFullYear() === currentYear) {
-            dayDiv.classList.add('today');
-        }
-
-        // 建立日期數字
-        const dayNumberDiv = document.createElement('div');
-        dayNumberDiv.className = 'day-number';
-        dayNumberDiv.textContent = dayNumber;
-        dayDiv.appendChild(dayNumberDiv);
-
-        // 建立活動列表
-        const eventsDiv = document.createElement('div');
-        eventsDiv.className = 'day-events';
-        
-        if (!isOtherMonth) {
-            // 尋找該日的活動
-            const dayEvents = findEventsForDate(currentYear, currentMonth, dayNumber);
-            dayEvents.forEach(event => {
-                const eventDiv = document.createElement('div');
-                eventDiv.className = 'calendar-event';
-                if (selectedEventIds.includes(event['活動ID'])) {
-                    eventDiv.classList.add('selected');
+            // 顯示時間和標題
+            const timeStr = formatTime(event['開始時間']);
+            let displayText = `${timeStr} ${event['活動標題']}`;
+            
+            // 加入容量資訊
+            if (event['活動人數上限'] && !isNaN(parseInt(event['活動人數上限']))) {
+                if (event.isFull) {
+                    displayText += ' [額滿]';
+                } else if (event.remainingSlots <= 3) {
+                    displayText += ` [剩${event.remainingSlots}]`;
                 }
-                
-                // 顯示時間和標題
-                const timeStr = formatTime(event['開始時間']);
-                eventDiv.textContent = `${timeStr} ${event['活動標題']}`;
-                eventDiv.title = `${event['活動標題']}\n講師：${event['講師'] || '待確認'}\n時間：${timeStr}`;
-                
-                eventDiv.onclick = (e) => {
-                    e.stopPropagation();
+            }
+            
+            eventDiv.textContent = displayText;
+            
+            let tooltipText = `${event['活動標題']}\n講師：${event['講師'] || '待確認'}\n時間：${timeStr}`;
+            if (event['活動人數上限'] && !isNaN(parseInt(event['活動人數上限']))) {
+                tooltipText += `\n報名：${event.currentRegistrations}/${event['活動人數上限']}`;
+            }
+            eventDiv.title = tooltipText;
+
+            eventDiv.onclick = (e) => {
+                e.stopPropagation();
+                if (!event.isFull) {
                     toggleEvent(event['活動ID']);
-                };
-                
-                eventsDiv.appendChild(eventDiv);
-            });
-        }
+                } else {
+                    alert(`很抱歉，「${event['活動標題']}」已額滿！`);
+                }
+            };
+
+            eventsDiv.appendChild(eventDiv);
+        });
+    }
+
+    dayDiv.appendChild(eventsDiv);
+    return dayDiv;
+}
+
+// 尋找特定日期的活動
+function findEventsForDate(year, month, day) {
+    const targetDate = new Date(year, month, day);
+    return events.filter(event => {
+        const eventDate = new Date(event['活動日期']);
+        return eventDate.getFullYear() === year &&
+               eventDate.getMonth() === month &&
+               eventDate.getDate() === day;
+    });
+}
+
+// 改變月份
+function changeMonth(direction) {
+    currentDate.setMonth(currentDate.getMonth() + direction);
+    renderCalendar();
+}
+
+// 渲染活動列表
+function renderEventsList() {
+    const container = document.getElementById('eventsContainer');
+
+    if (events.length === 0) {
+        container.innerHTML = `
+            <div class="error">
+                <h4>沒有找到課程</h4>
+                <p>目前沒有可報名的課程</p>
+            </div>
+        `;
+        return;
+    }
+
+    // 按日期排序活動
+    const sortedEvents = [...events].sort((a, b) => {
+        const dateA = new Date(a['活動日期']);
+        const dateB = new Date(b['活動日期']);
+        return dateA - dateB;
+    });
+
+    const html = sortedEvents.map(event => {
+        const isFull = event.isFull;
+        const hasLimit = event['活動人數上限'] && !isNaN(parseInt(event['活動人數上限']));
+        const isWarning = hasLimit && event.remainingSlots <= 3 && !isFull;
         
-        dayDiv.appendChild(eventsDiv);
-        return dayDiv;
-    }
-
-    // 尋找特定日期的活動
-    function findEventsForDate(year, month, day) {
-        const targetDate = new Date(year, month, day);
-        return events.filter(event => {
-            const eventDate = new Date(event['活動日期']);
-            return eventDate.getFullYear() === year &&
-                   eventDate.getMonth() === month &&
-                   eventDate.getDate() === day;
-        });
-    }
-
-    // 改變月份
-    function changeMonth(direction) {
-        currentDate.setMonth(currentDate.getMonth() + direction);
-        renderCalendar();
-    }
-
-    // 渲染活動列表
-    function renderEventsList() {
-        const container = document.getElementById('eventsContainer');
-
-        if (events.length === 0) {
-            container.innerHTML = `
-                <div class="error">
-                    <h4>沒有找到課程</h4>
-                    <p>目前沒有可報名的課程</p>
-                </div>
-            `;
-            return;
+        let capacityInfo = '';
+        if (hasLimit) {
+            const capacityClass = isFull ? 'capacity-full' : 
+                                 isWarning ? 'capacity-warning' : 
+                                 'capacity-available';
+            capacityInfo = `<span class="capacity-info ${capacityClass}">
+                ${event.currentRegistrations}/${event['活動人數上限']}
+            </span>`;
         }
 
-        // 按日期排序活動
-        const sortedEvents = [...events].sort((a, b) => {
-            const dateA = new Date(a['活動日期']);
-            const dateB = new Date(b['活動日期']);
-            return dateA - dateB;
-        });
-
-        const html = sortedEvents.map(event => `
-            <div class="event-card" data-event-id="${event['活動ID']}" onclick="toggleEvent('${event['活動ID']}')">
+        return `
+            <div class="event-card ${isFull ? 'full' : ''} ${selectedEventIds.includes(event['活動ID']) && !isFull ? 'selected' : ''}" 
+                 data-event-id="${event['活動ID']}" 
+                 onclick="${isFull ? `alert('很抱歉，此活動已額滿！')` : `toggleEvent('${event['活動ID']}')`}">
+                
+                ${isFull ? '<div class="full-overlay">🚫 已額滿</div>' : ''}
+                
                 <div class="event-header">
-                    <input type="checkbox" class="event-checkbox" ${selectedEventIds.includes(event['活動ID']) ? 'checked' : ''}>
-                    <h3 class="event-title">${event['活動標題']}</h3>
+                    <input type="checkbox" class="event-checkbox" 
+                           ${selectedEventIds.includes(event['活動ID']) && !isFull ? 'checked' : ''} 
+                           ${isFull ? 'disabled' : ''}>
+                    <h3 class="event-title ${isFull ? 'full' : ''}">${event['活動標題']} ${capacityInfo}</h3>
                 </div>
                 <div class="event-details">
                     <div>👨‍🏫 講師：${event['講師'] || '待確認'}</div>
                     <div>📅 日期：${formatDate(event['活動日期'])}</div>
                     <div>🕐 時間：${formatTime(event['開始時間'])}</div>
                     <div>📍 地點：${event['地址或地點說明'] || '待確認'}</div>
+                    ${hasLimit ? `<div>👥 報名狀況：${event.currentRegistrations}/${event['活動人數上限']} ${isFull ? '(已額滿)' : isWarning ? '(即將額滿)' : ''}</div>` : ''}
                     ${event['活動內容'] ? `<div>📋 內容：${event['活動內容']}</div>` : ''}
                     ${event['備註'] ? `<div>⚠️ 備註：${event['備註']}</div>` : ''}
                     ${event['自訂欄位問題'] ? `<div>❓ 問題：${event['自訂欄位問題']}</div>` : ''}
                 </div>
             </div>
-        `).join('');
+        `;
+    }).join('');
 
-        container.innerHTML = `<div class="events-grid">${html}</div>`;
+    container.innerHTML = `<div class="events-grid">${html}</div>`;
+    updateEventCards();
+}
+
+// 切換活動選擇
+function toggleEvent(eventId) {
+    // 檢查活動是否額滿
+    const event = events.find(e => e['活動ID'] === eventId);
+    if (event && event.isFull) {
+        alert(`很抱歉，「${event['活動標題']}」已額滿！`);
+        return;
+    }
+
+    const index = selectedEventIds.indexOf(eventId);
+
+    if (index > -1) {
+        selectedEventIds.splice(index, 1);
+    } else {
+        selectedEventIds.push(eventId);
+    }
+
+    // 更新顯示
+    if (currentView === 'calendar') {
+        renderCalendar();
+    } else {
         updateEventCards();
     }
 
-    // 切換活動選擇
-    function toggleEvent(eventId) {
-        const index = selectedEventIds.indexOf(eventId);
-        
-        if (index > -1) {
-            selectedEventIds.splice(index, 1);
-        } else {
-            selectedEventIds.push(eventId);
-        }
+    updateSelectedSummary();
+    updateCustomFields();
+}
 
-        // 更新顯示
-        if (currentView === 'calendar') {
-            renderCalendar();
+// 更新活動卡片選擇狀態
+function updateEventCards() {
+    document.querySelectorAll('.event-card').forEach(card => {
+        const eventId = card.dataset.eventId;
+        const checkbox = card.querySelector('.event-checkbox');
+        const isSelected = selectedEventIds.includes(eventId);
+        const event = events.find(e => e['活動ID'] === eventId);
+        const isFull = event && event.isFull;
+
+        if (isSelected && !isFull) {
+            card.classList.add('selected');
+            checkbox.checked = true;
         } else {
-            updateEventCards();
+            card.classList.remove('selected');
+            checkbox.checked = false;
         }
-        
-        updateSelectedSummary();
-        updateCustomFields();
+    });
+}
+
+// 更新已選課程摘要
+function updateSelectedSummary() {
+    const summaryDiv = document.getElementById('selectedSummary');
+    const listDiv = document.getElementById('selectedList');
+
+    if (selectedEventIds.length === 0) {
+        summaryDiv.classList.add('hidden');
+        return;
     }
 
-    // 更新活動卡片選擇狀態
-    function updateEventCards() {
-        document.querySelectorAll('.event-card').forEach(card => {
-            const eventId = card.dataset.eventId;
-            const checkbox = card.querySelector('.event-checkbox');
-            const isSelected = selectedEventIds.includes(eventId);
-            
-            if (isSelected) {
-                card.classList.add('selected');
-                checkbox.checked = true;
-            } else {
-                card.classList.remove('selected');
-                checkbox.checked = false;
-            }
-        });
-    }
+    const selectedEvents = events.filter(event =>
+        selectedEventIds.includes(event['活動ID'])
+    );
 
-    // 更新已選課程摘要
-    function updateSelectedSummary() {
-        const summaryDiv = document.getElementById('selectedSummary');
-        const listDiv = document.getElementById('selectedList');
-        
-        if (selectedEventIds.length === 0) {
-            summaryDiv.classList.add('hidden');
-            return;
+    const html = selectedEvents.map(event => {
+        let capacityText = '';
+        if (event['活動人數上限'] && !isNaN(parseInt(event['活動人數上限']))) {
+            capacityText = ` (${event.currentRegistrations}/${event['活動人數上限']})`;
         }
         
-        const selectedEvents = events.filter(event => 
-            selectedEventIds.includes(event['活動ID'])
-        );
-        
-        const html = selectedEvents.map(event => `
+        return `
             <div style="margin-bottom: 8px; padding: 8px; background: #f0f9ff; border-radius: 4px;">
-                <strong>${event['活動標題']}</strong><br>
+                <strong>${event['活動標題']}</strong>${capacityText}<br>
                 <small>📅 ${formatDate(event['活動日期'])} 🕐 ${formatTime(event['開始時間'])}</small>
             </div>
-        `).join('');
-        
-        listDiv.innerHTML = html;
-        summaryDiv.classList.remove('hidden');
+        `;
+    }).join('');
+
+    listDiv.innerHTML = html;
+    summaryDiv.classList.remove('hidden');
+}
+
+// 更新自訂欄位
+function updateCustomFields() {
+    const customFieldsDiv = document.getElementById('customFields');
+    const selectedEvents = events.filter(event =>
+        selectedEventIds.includes(event['活動ID'])
+    );
+
+    // 找出有自訂問題的活動
+    const eventsWithCustomFields = selectedEvents.filter(event =>
+        event['自訂欄位問題'] && event['自訂欄位問題'].trim()
+    );
+
+    if (eventsWithCustomFields.length === 0) {
+        customFieldsDiv.classList.add('hidden');
+        customFieldsDiv.innerHTML = '';
+        return;
     }
 
-    // 更新自訂欄位
-    function updateCustomFields() {
-        const customFieldsDiv = document.getElementById('customFields');
-        const selectedEvents = events.filter(event => 
-            selectedEventIds.includes(event['活動ID'])
-        );
-        
-        // 找出有自訂問題的活動
-        const eventsWithCustomFields = selectedEvents.filter(event => 
-            event['自訂欄位問題'] && event['自訂欄位問題'].trim()
-        );
-        
-        if (eventsWithCustomFields.length === 0) {
-            customFieldsDiv.classList.add('hidden');
-            customFieldsDiv.innerHTML = '';
+    let html = '<div class="custom-fields"><h4>📋 課程相關問題</h4>';
+
+    eventsWithCustomFields.forEach(event => {
+        html += `
+            <div class="form-group">
+                <label class="form-label">${event['活動標題']} - ${event['自訂欄位問題']}</label>
+                <textarea class="form-control" name="custom_${event['活動ID']}" rows="2"
+                          placeholder="請回答此問題..."></textarea>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    customFieldsDiv.innerHTML = html;
+    customFieldsDiv.classList.remove('hidden');
+}
+
+// 清除選擇
+function clearSelection() {
+    selectedEventIds = [];
+
+    if (currentView === 'calendar') {
+        renderCalendar();
+    } else {
+        updateEventCards();
+    }
+
+    updateSelectedSummary();
+    updateCustomFields();
+}
+
+// 設置表單
+function setupForm() {
+    document.getElementById('signupForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        if (selectedEventIds.length === 0) {
+            alert('請至少選擇一個課程');
             return;
         }
-        
-        let html = '<div class="custom-fields"><h4>📋 課程相關問題</h4>';
-        
-        eventsWithCustomFields.forEach(event => {
-            html += `
-                <div class="form-group">
-                    <label class="form-label">${event['活動標題']} - ${event['自訂欄位問題']}</label>
-                    <textarea class="form-control" name="custom_${event['活動ID']}" rows="2" 
-                              placeholder="請回答此問題..."></textarea>
-                </div>
-            `;
-        });
-        
-        html += '</div>';
-        customFieldsDiv.innerHTML = html;
-        customFieldsDiv.classList.remove('hidden');
-    }
 
-    // 清除選擇
-    function clearSelection() {
-        selectedEventIds = [];
+        // 檢查選擇的課程是否有額滿的
+        const selectedEvents = events.filter(event => selectedEventIds.includes(event['活動ID']));
+        const fullEvents = selectedEvents.filter(event => event.isFull);
         
-        if (currentView === 'calendar') {
-            renderCalendar();
-        } else {
-            updateEventCards();
+        if (fullEvents.length > 0) {
+            alert(`很抱歉，以下課程已額滿，請重新選擇：\n${fullEvents.map(e => e['活動標題']).join('\n')}`);
+            return;
         }
-        
-        updateSelectedSummary();
-        updateCustomFields();
-    }
 
-    // 設置表單
-    function setupForm() {
-        document.getElementById('signupForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+        const formData = new FormData(this);
+        const submitBtn = this.querySelector('button[type="submit"]');
 
-            if (selectedEventIds.length === 0) {
-                alert('請至少選擇一個課程');
-                return;
+        submitBtn.disabled = true;
+        submitBtn.textContent = '報名中...';
+
+        let successCount = 0;
+        let errorMessages = [];
+
+        try {
+            for (const eventId of selectedEventIds) {
+                // 收集自訂欄位回答
+                const customAnswer = formData.get(`custom_${eventId}`) || '';
+
+                const data = new URLSearchParams({
+                    action: 'register',
+                    eventId: eventId,
+                    name: formData.get('name'),
+                    lineName: formData.get('lineName'),
+                    phone: formData.get('phone'),
+                    email: formData.get('email'),
+                    gender: formData.get('gender'),
+                    age: formData.get('age'),
+                    note: formData.get('note'),
+                    customFieldAnswer: customAnswer
+                });
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: data
+                });
+
+                const result = await response.json();
+
+                if (result.error || !result.success) {
+                    const event = events.find(e => e['活動ID'] === eventId);
+                    const eventTitle = event ? event['活動標題'] : eventId;
+                    errorMessages.push(`${eventTitle}: ${result.error || '未知錯誤'}`);
+                } else {
+                    successCount++;
+                }
             }
 
-            const formData = new FormData(this);
-            const submitBtn = this.querySelector('button[type="submit"]');
+            // 重新載入活動資料以更新容量狀態
+            await loadEvents();
 
-            submitBtn.disabled = true;
-            submitBtn.textContent = '報名中...';
-
-            try {
-                for (const eventId of selectedEventIds) {
-                    // 收集自訂欄位回答
-                    const customAnswer = formData.get(`custom_${eventId}`) || '';
-
-                    const data = new URLSearchParams({
-                        action: 'register',
-                        eventId: eventId,
-                        name: formData.get('name'),
-                        lineName: formData.get('lineName'),
-                        phone: formData.get('phone'),
-                        email: formData.get('email'),
-                        gender: formData.get('gender'),
-                        age: formData.get('age'),
-                        note: formData.get('note'),
-                        customFieldAnswer: customAnswer
-                    });
-
-                    const response = await fetch(API_URL, {
-                        method: 'POST',
-                        body: data
-                    });
-
-                    const result = await response.json();
-
-                    if (result.error) {
-                        throw new Error(result.error);
-                    }
-                }
-
+            if (successCount > 0) {
                 // 顯示成功訊息
                 const successMsg = document.createElement('div');
                 successMsg.className = 'success';
                 successMsg.innerHTML = `
                     <h4>🎉 報名成功！</h4>
-                    <p>您已成功報名 ${selectedEventIds.length} 個課程</p>
+                    <p>您已成功報名 ${successCount} 個課程</p>
+                    ${errorMessages.length > 0 ? `<p style="color: #ff9800;">部分課程報名失敗：<br>${errorMessages.join('<br>')}</p>` : ''}
                     <p>我們會在活動前一天提醒您，請準時參加！</p>
                 `;
-                
+
                 this.parentNode.insertBefore(successMsg, this);
-                
+
                 // 清除表單和選擇
                 this.reset();
                 clearSelection();
-                
-                // 3秒後移除成功訊息
+
+                // 5秒後移除成功訊息
                 setTimeout(() => {
                     if (successMsg.parentNode) {
                         successMsg.parentNode.removeChild(successMsg);
                     }
                 }, 5000);
-
-            } catch (error) {
-                const errorMsg = document.createElement('div');
-                errorMsg.className = 'error';
-                errorMsg.innerHTML = `
-                    <h4>❌ 報名失敗</h4>
-                    <p>${error.message}</p>
-                `;
-                this.parentNode.insertBefore(errorMsg, this);
-                
-                setTimeout(() => {
-                    if (errorMsg.parentNode) {
-                        errorMsg.parentNode.removeChild(errorMsg);
-                    }
-                }, 5000);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = '✅ 送出報名';
-            }
-        });
-    }
-
-    // 格式化日期
-    function formatDate(dateStr) {
-        if (!dateStr) return '';
-        try {
-            const date = new Date(dateStr);
-            const month = date.getMonth() + 1;
-            const day = date.getDate();
-            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-            const weekday = weekdays[date.getDay()];
-            return `${month}/${day} (${weekday})`;
-        } catch {
-            return dateStr;
-        }
-    }
-
-    // 格式化時間
-    function formatTime(timeStr) {
-        if (!timeStr) return '';
-        try {
-            if (timeStr.toString().includes('1899')) {
-                const date = new Date(timeStr);
-                const hours = String(date.getHours()).padStart(2, '0');
-                const minutes = String(date.getMinutes()).padStart(2, '0');
-                return `${hours}:${minutes}`;
-            }
-            return timeStr;
-        } catch {
-            return timeStr;
-        }
-    }
-
-    // 鍵盤快捷鍵
-    document.addEventListener('keydown', function(e) {
-        // Ctrl/Cmd + L: 切換到列表檢視
-        if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
-            e.preventDefault();
-            switchToList();
-        }
-        
-        // Ctrl/Cmd + C: 切換到月曆檢視
-        if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-            e.preventDefault();
-            switchToCalendar();
-        }
-        
-        // Escape: 清除選擇
-        if (e.key === 'Escape') {
-            clearSelection();
-        }
-    });
-
-    // 觸控手勢支援（手機滑動切換月份）
-    let touchStartX = 0;
-    let touchEndX = 0;
-
-    document.getElementById('calendarView').addEventListener('touchstart', function(e) {
-        touchStartX = e.changedTouches[0].screenX;
-    });
-
-    document.getElementById('calendarView').addEventListener('touchend', function(e) {
-        touchEndX = e.changedTouches[0].screenX;
-        handleSwipe();
-    });
-
-    function handleSwipe() {
-        const swipeThreshold = 50;
-        const swipeDistance = touchEndX - touchStartX;
-        
-        if (Math.abs(swipeDistance) > swipeThreshold) {
-            if (swipeDistance > 0) {
-                // 向右滑動 - 上個月
-                changeMonth(-1);
             } else {
-                // 向左滑動 - 下個月
-                changeMonth(1);
+                throw new Error(errorMessages.join('\n'));
             }
-        }
-    }
 
-    // 頁面可見性變更時重新載入（避免資料過期）
-    document.addEventListener('visibilitychange', function() {
-        if (!document.hidden) {
-            // 如果超過5分鐘沒有重新載入，自動重新載入
-            const lastLoad = localStorage.getItem('lastEventLoad');
-            const now = Date.now();
-            if (!lastLoad || (now - parseInt(lastLoad)) > 5 * 60 * 1000) {
-                loadEvents();
-                localStorage.setItem('lastEventLoad', now.toString());
-            }
+        } catch (error) {
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'error';
+            errorMsg.innerHTML = `
+                <h4>❌ 報名失敗</h4>
+                <p>${error.message}</p>
+            `;
+            this.parentNode.insertBefore(errorMsg, this);
+
+            setTimeout(() => {
+                if (errorMsg.parentNode) {
+                    errorMsg.parentNode.removeChild(errorMsg);
+                }
+            }, 5000);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '✅ 送出報名';
         }
     });
+}
 
-    // 設定初始載入時間
-    localStorage.setItem('lastEventLoad', Date.now().toString());
+// 格式化日期
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    try {
+        const date = new Date(dateStr);
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+        const weekday = weekdays[date.getDay()];
+        return `${month}/${day} (${weekday})`;
+    } catch {
+        return dateStr;
+    }
+}
+
+// 格式化時間
+function formatTime(timeStr) {
+    if (!timeStr) return '';
+    try {
+        if (timeStr.toString().includes('1899')) {
+            const date = new Date(timeStr);
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
+        return timeStr;
+    } catch {
+        return timeStr;
+    }
+}
+
+// 鍵盤快捷鍵
+document.addEventListener('keydown', function(e) {
+    // Ctrl/Cmd + L: 切換到列表檢視
+    if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+        e.preventDefault();
+        switchToList();
+    }
+
+    // Ctrl/Cmd + C: 切換到月曆檢視
+    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        e.preventDefault();
+        switchToCalendar();
+    }
+
+    // Escape: 清除選擇
+    if (e.key === 'Escape') {
+        clearSelection();
+    }
+});
+
+// 觸控手勢支援（手機滑動切換月份）
+let touchStartX = 0;
+let touchEndX = 0;
+
+document.getElementById('calendarView').addEventListener('touchstart', function(e) {
+    touchStartX = e.changedTouches[0].screenX;
+});
+
+document.getElementById('calendarView').addEventListener('touchend', function(e) {
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+});
+
+function handleSwipe() {
+    const swipeThreshold = 50;
+    const swipeDistance = touchEndX - touchStartX;
+
+    if (Math.abs(swipeDistance) > swipeThreshold) {
+        if (swipeDistance > 0) {
+            // 向右滑動 - 上個月
+            changeMonth(-1);
+        } else {
+            // 向左滑動 - 下個月
+            changeMonth(1);
+        }
+    }
+}
+
+// 頁面可見性變更時重新載入（避免資料過期）
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        // 如果超過5分鐘沒有重新載入，自動重新載入
+        const lastLoad = localStorage.getItem('lastEventLoad');
+        const now = Date.now();
+        if (!lastLoad || (now - parseInt(lastLoad)) > 5 * 60 * 1000) {
+            loadEvents();
+            localStorage.setItem('lastEventLoad', now.toString());
+        }
+    }
+});
+
+// 設定初始載入時間
+localStorage.setItem('lastEventLoad', Date.now().toString());
+
 </script>
 </body>
 </html>
