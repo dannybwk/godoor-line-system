@@ -1,754 +1,862 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>本月課程報名</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { 
-            font-family: 'Microsoft JhengHei', Arial, sans-serif; 
-            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-            font-size: 16px;
-            line-height: 1.6;
-        }
-        
-        .container { 
-            max-width: 900px; 
-            margin: 20px auto; 
-            padding: 20px;
-        }
-        
-        h1, h5 { 
-            color: #f57c00; 
-            font-weight: bold;
-        }
-        
-        /* 月曆樣式 */
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 5px;
-            margin-bottom: 30px;
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(245, 124, 0, 0.1);
-        }
-        
-        .calendar-header {
-            text-align: center;
-            font-weight: bold;
-            color: #f57c00;
-            padding: 15px 5px;
-            font-size: 18px;
-        }
-        
-        .calendar-day {
-            min-height: 120px;
-            border: 2px solid #ffe0b2;
-            border-radius: 10px;
-            padding: 8px;
-            background: #fafafa;
-            position: relative;
-        }
-        
-        .calendar-day.today {
-            background: #fff3e0;
-            border-color: #ff9800;
-        }
-        
-        .day-number {
-            font-weight: bold;
-            color: #666;
-            margin-bottom: 5px;
-        }
-        
-        .event-item {
-            background: #ff9800;
-            color: white;
-            padding: 4px 6px;
-            border-radius: 6px;
-            font-size: 13px;
-            margin-bottom: 3px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .event-item:hover {
-            background: #f57c00;
-            transform: translateY(-1px);
-        }
-        
-        .event-item.selected {
-            background: #4caf50;
-            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
-        }
-        
-        .event-item.full {
-            background: #757575;
-            cursor: not-allowed;
-        }
-        
-        /* 課程清單樣式 */
-        .event-list-item {
-            background: white;
-            border: 2px solid #ffe0b2;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 15px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .event-list-item:hover {
-            border-color: #ff9800;
-            box-shadow: 0 4px 15px rgba(245, 124, 0, 0.2);
-        }
-        
-        .event-list-item.selected {
-            border-color: #4caf50;
-            background: #f1f8e9;
-        }
-        
-        .event-list-item.full {
-            background: #f5f5f5;
-            border-color: #ccc;
-            cursor: not-allowed;
-        }
-        
-        .event-checkbox {
-            width: 20px;
-            height: 20px;
-            margin-right: 15px;
-        }
-        
-        .event-title {
-            font-size: 20px;
-            font-weight: bold;
-            color: #f57c00;
-            margin-bottom: 8px;
-        }
-        
-        .event-details {
-            color: #666;
-            font-size: 16px;
-        }
-        
-        .full-badge {
-            background: #f44336;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            margin-left: 10px;
-        }
-        
-        /* 表單樣式 */
-        .form-section {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(245, 124, 0, 0.1);
-            margin-top: 30px;
-        }
-        
-        .form-control, .form-select {
-            font-size: 16px;
-            padding: 12px;
-            border: 2px solid #ffe0b2;
-            border-radius: 10px;
-        }
-        
-        .form-control:focus, .form-select:focus {
-            border-color: #ff9800;
-            box-shadow: 0 0 0 0.2rem rgba(255, 152, 0, 0.25);
-        }
-        
-        .btn-warning {
-            background: #ff9800;
-            border: none;
-            font-size: 18px;
-            font-weight: bold;
-            padding: 15px;
-            border-radius: 10px;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-warning:hover {
-            background: #f57c00;
-            transform: translateY(-2px);
-        }
-        
-        .required {
-            color: #f44336;
-            font-weight: bold;
-        }
-        
-        .custom-field {
-            background: #fff3e0;
-            border: 2px solid #ffcc02;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-        
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            color: #666;
-            font-size: 14px;
-        }
-        
-        /* 視圖切換按鈕 */
-        .view-toggle {
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        
-        .view-toggle button {
-            margin: 0 5px;
-            font-size: 16px;
-        }
-        
-        /* 載入和錯誤訊息樣式 */
-        .loading-message {
-            text-align: center;
-            padding: 40px;
-            font-size: 18px;
-            color: #f57c00;
-        }
-        
-        .error-message {
-            background: #fff3e0;
-            border: 2px solid #ff9800;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
-            color: #f57c00;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>本月課程報名</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+body {
+    font-family: 'Microsoft JhengHei', Arial, sans-serif;
+    background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 20px;
+}
+
+h1, h5 {
+    color: #f57c00;
+    font-weight: bold;
+}
+
+/* 月曆樣式 */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    margin-bottom: 30px;
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(245, 124, 0, 0.1);
+}
+
+.calendar-header {
+    text-align: center;
+    font-weight: bold;
+    color: #f57c00;
+    padding: 15px 5px;
+    font-size: 18px;
+}
+
+.calendar-day {
+    min-height: 120px;
+    border: 2px solid #ffe0b2;
+    border-radius: 10px;
+    padding: 8px;
+    background: #fafafa;
+    position: relative;
+}
+
+.calendar-day.today {
+    background: #fff3e0;
+    border-color: #ff9800;
+}
+
+.day-number {
+    font-weight: bold;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.event-item {
+    background: #ff9800;
+    color: white;
+    padding: 4px 6px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-bottom: 3px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.event-item:hover {
+    background: #f57c00;
+    transform: translateY(-1px);
+}
+
+.event-item.selected {
+    background: #4caf50;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.event-item.full {
+    background: #757575;
+    cursor: not-allowed;
+}
+
+/* 課程清單樣式 */
+.event-list-item {
+    background: white;
+    border: 2px solid #ffe0b2;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 15px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.event-list-item:hover {
+    border-color: #ff9800;
+    box-shadow: 0 4px 15px rgba(245, 124, 0, 0.2);
+}
+
+.event-list-item.selected {
+    border-color: #4caf50;
+    background: #f1f8e9;
+}
+
+.event-list-item.full {
+    background: #f5f5f5;
+    border-color: #ccc;
+    cursor: not-allowed;
+}
+
+.event-checkbox {
+    width: 20px;
+    height: 20px;
+    margin-right: 15px;
+}
+
+.event-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #f57c00;
+    margin-bottom: 8px;
+}
+
+.event-details {
+    color: #666;
+    font-size: 16px;
+}
+
+.full-badge {
+    background: #f44336;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+/* 表單樣式 */
+.form-section {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(245, 124, 0, 0.1);
+    margin-top: 30px;
+}
+
+.form-control, .form-select {
+    font-size: 16px;
+    padding: 12px;
+    border: 2px solid #ffe0b2;
+    border-radius: 10px;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #ff9800;
+    box-shadow: 0 0 0 0.2rem rgba(255, 152, 0, 0.25);
+}
+
+.btn-warning {
+    background: #ff9800;
+    border: none;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 15px;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.btn-warning:hover {
+    background: #f57c00;
+    transform: translateY(-2px);
+}
+
+.required {
+    color: #f44336;
+    font-weight: bold;
+}
+
+.custom-field {
+    background: #fff3e0;
+    border: 2px solid #ffcc02;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.footer {
+    text-align: center;
+    margin-top: 40px;
+    color: #666;
+    font-size: 14px;
+}
+
+/* 視圖切換按鈕 */
+.view-toggle {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.view-toggle button {
+    margin: 0 5px;
+    font-size: 16px;
+}
+
+/* 載入和錯誤訊息樣式 */
+.loading-message {
+    text-align: center;
+    padding: 40px;
+    font-size: 18px;
+    color: #f57c00;
+}
+
+.error-message {
+    background: #fff3e0;
+    border: 2px solid #ff9800;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+    color: #f57c00;
+}
+
+/* 調試信息樣式 */
+.debug-info {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 10px;
+    margin: 10px 0;
+    font-family: monospace;
+    font-size: 12px;
+    color: #495057;
+    max-height: 200px;
+    overflow-y: auto;
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="text-center mb-4">🍊 本月課程報名</h1>
-        
-        <!-- 視圖切換 -->
-        <div class="view-toggle">
-            <button class="btn btn-outline-warning" onclick="showCalendarView()">📅 月曆檢視</button>
-            <button class="btn btn-outline-warning" onclick="showListView()">📋 清單檢視</button>
-        </div>
-        
-        <!-- 月曆視圖 -->
-        <div id="calendar-view" class="calendar-section">
-            <h5 class="mb-3">📅 請點選想報名的課程</h5>
-            <div id="calendar-container">
-                <div class="calendar-grid" id="calendar-grid">
-                    <!-- 月曆會動態生成 -->
-                </div>
+<div class="container">
+    <h1 class="text-center mb-4">🍊 本月課程報名</h1>
+
+    <!-- 據點信息顯示 -->
+    <div id="site-info" class="alert alert-info" style="display: none;">
+        <strong>📍 當前據點：</strong><span id="current-site"></span>
+    </div>
+
+    <!-- 視圖切換 -->
+    <div class="view-toggle">
+        <button class="btn btn-outline-warning" onclick="showCalendarView()">📅 月曆檢視</button>
+        <button class="btn btn-outline-warning" onclick="showListView()">📋 清單檢視</button>
+    </div>
+
+    <!-- 月曆視圖 -->
+    <div id="calendar-view" class="calendar-section">
+        <h5 class="mb-3">📅 請點選想報名的課程</h5>
+        <div id="calendar-container">
+            <div class="calendar-grid" id="calendar-grid">
+                <!-- 月曆會動態生成 -->
             </div>
-        </div>
-        
-        <!-- 清單視圖 -->
-        <div id="list-view" class="calendar-section" style="display: none;">
-            <h5 class="mb-3">📋 請勾選想報名的課程</h5>
-            <div id="events-container">
-                <div class="loading-message">載入中...</div>
-            </div>
-        </div>
-        
-        <!-- 表單區域 -->
-        <div class="form-section">
-            <h5 class="mb-3">📝 基本資料</h5>
-            <form id="signup-form">
-                <div class="mb-3">
-                    <label for="name">姓名 <span class="required">(必填)</span></label>
-                    <input type="text" class="form-control" id="name" name="name" placeholder="請輸入您的姓名" required>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="lineName">LINE上的名字 <span class="required">(必填)</span></label>
-                    <input type="text" class="form-control" id="lineName" name="lineName" placeholder="請輸入LINE上的名字" required>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="gender">性別</label>
-                    <select class="form-select" id="gender" name="gender">
-                        <option value="">請選擇性別</option>
-                        <option value="男">男</option>
-                        <option value="女">女</option>
-                        <option value="其他">其他</option>
-                    </select>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="age">年齡</label>
-                    <input type="number" class="form-control" id="age" name="age" placeholder="請輸入年齡" min="1" max="120">
-                </div>
-                
-                <div class="mb-3">
-                    <label for="phone">手機號碼 <span class="required">(必填)</span></label>
-                    <input type="tel" class="form-control" id="phone" name="phone" placeholder="請輸入手機號碼" required>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="email">電子郵件</label>
-                    <input type="email" class="form-control" id="email" name="email" placeholder="請輸入電子郵件">
-                </div>
-                
-                <div class="mb-3">
-                    <label for="note">備註</label>
-                    <textarea class="form-control" id="note" name="note" rows="3" placeholder="有任何需要我們知道的事情，請在這裡說明"></textarea>
-                </div>
-                
-                <!-- 動態自訂欄位 -->
-                <div id="custom-fields"></div>
-                
-                <input type="hidden" id="lineId" name="lineId">
-                <button type="submit" class="btn btn-warning w-100">✅ 送出報名</button>
-            </form>
-        </div>
-        
-        <div class="footer">
-            Powered by <span style="color:#f07f2f;font-weight:bold">果多</span><br>
-            <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" width="50" />
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // 全域變數
-        let allEvents = [];
-        let selectedEvents = [];
-        let registrationCounts = {};
+    <!-- 清單視圖 -->
+    <div id="list-view" class="calendar-section" style="display: none;">
+        <h5 class="mb-3">📋 請勾選想報名的課程</h5>
+        <div id="events-container">
+            <div class="loading-message">載入中...</div>
+        </div>
+    </div>
+
+    <!-- 調試面板 -->
+    <div id="debug-panel" style="display: none;">
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">🔧 調試信息</h6>
+            </div>
+            <div class="card-body">
+                <div id="debug-info" class="debug-info"></div>
+                <button class="btn btn-sm btn-secondary" onclick="testConnection()">測試連接</button>
+                <button class="btn btn-sm btn-secondary" onclick="toggleDebug()">隱藏調試</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 表單區域 -->
+    <div class="form-section">
+        <h5 class="mb-3">📝 基本資料</h5>
+        <form id="signup-form">
+            <div class="mb-3">
+                <label for="name">姓名 <span class="required">(必填)</span></label>
+                <input type="text" class="form-control" id="name" name="name" placeholder="請輸入您的姓名" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="lineName">LINE上的名字 <span class="required">(必填)</span></label>
+                <input type="text" class="form-control" id="lineName" name="lineName" placeholder="請輸入LINE上的名字" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="gender">性別</label>
+                <select class="form-select" id="gender" name="gender">
+                    <option value="">請選擇性別</option>
+                    <option value="男">男</option>
+                    <option value="女">女</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="age">年齡</label>
+                <input type="number" class="form-control" id="age" name="age" placeholder="請輸入年齡" min="1" max="120">
+            </div>
+
+            <div class="mb-3">
+                <label for="phone">手機號碼 <span class="required">(必填)</span></label>
+                <input type="tel" class="form-control" id="phone" name="phone" placeholder="請輸入手機號碼" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="email">電子郵件</label>
+                <input type="email" class="form-control" id="email" name="email" placeholder="請輸入電子郵件">
+            </div>
+
+            <div class="mb-3">
+                <label for="note">備註</label>
+                <textarea class="form-control" id="note" name="note" rows="3" placeholder="有任何需要我們知道的事情，請在這裡說明"></textarea>
+            </div>
+
+            <!-- 動態自訂欄位 -->
+            <div id="custom-fields"></div>
+
+            <input type="hidden" id="lineId" name="lineId">
+            <button type="submit" class="btn btn-warning w-100">✅ 送出報名</button>
+        </form>
+    </div>
+
+    <!-- 顯示調試按鈕 -->
+    <div class="text-center mt-3">
+        <button class="btn btn-sm btn-outline-secondary" onclick="toggleDebug()">🔧 顯示調試面板</button>
+    </div>
+
+    <div class="footer">
+        Powered by <span style="color:#f07f2f;font-weight:bold">果多</span><br>
+        <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" width="50" />
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // 全域變數
+    let allEvents = [];
+    let selectedEvents = [];
+    let registrationCounts = {};
+
+    // ⚠️ 重要：請替換為您實際的 Apps Script URL
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxpDCRA2PJXLy8ssWwG3NO4QZzg87gmUdB1vHWjYNdf9jmz-ku0yfnovhtfz58ep0oE/exec';
+
+    // 從 URL 取得據點參數
+    const urlParams = new URLSearchParams(window.location.search);
+    const siteKeyword = urlParams.get('site') || '';
+
+    // 調試功能
+    function addDebugLog(message) {
+        const debugInfo = document.getElementById('debug-info');
+        if (debugInfo) {
+            const timestamp = new Date().toLocaleTimeString();
+            debugInfo.innerHTML += `[${timestamp}] ${message}\n`;
+            debugInfo.scrollTop = debugInfo.scrollHeight;
+        }
+        console.log(message);
+    }
+
+    function toggleDebug() {
+        const debugPanel = document.getElementById('debug-panel');
+        debugPanel.style.display = debugPanel.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // 頁面載入時初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        addDebugLog('頁面載入完成');
+        addDebugLog(`據點參數: "${siteKeyword}"`);
+        addDebugLog(`Apps Script URL: ${APPS_SCRIPT_URL}`);
         
-        // ⚠️ 重要：請替換為您實際的 Apps Script URL
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxpDCRA2PJXLy8ssWwG3NO4QZzg87gmUdB1vHWjYNdf9jmz-ku0yfnovhtfz58ep0oE/exec';
-        
-        // 從 URL 取得據點參數
-        const urlParams = new URLSearchParams(window.location.search);
-        const siteKeyword = urlParams.get('site') || '';
-        
-        // 頁面載入時初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('頁面載入完成，據點:', siteKeyword);
-            loadEvents();
-            setupForm();
-        });
-        
-        // 修正的載入活動資料函式 - 適應現有回應格式
-        async function loadEvents() {
-            console.log('開始載入活動資料，據點:', siteKeyword);
-    
-            const eventsContainer = document.getElementById('events-container');
-            eventsContainer.innerHTML = '<div class="loading-message">載入中...</div>';
-    
-            try {
-                // 使用 GET 請求載入活動
-                const url = `${APPS_SCRIPT_URL}?mode=events&site=${encodeURIComponent(siteKeyword)}`;
-                console.log('請求 URL:', url);
-        
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
-                });
-        
-                console.log('回應狀態:', response.status, response.statusText);
-        
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-        
-                const responseText = await response.text();
-                console.log('原始回應內容:', responseText.substring(0, 200) + '...');
-        
-                let data;
-                try {
-                    data = JSON.parse(responseText);
-                } catch (jsonError) {
-                    console.error('JSON 解析失敗:', jsonError);
-                    throw new Error('伺服器回應格式錯誤');
-                }
-        
-                console.log('解析後的資料類型:', Array.isArray(data) ? '陣列' : '物件');
-        
-                // 處理不同的回應格式
-                if (Array.isArray(data)) {
-                    // 如果直接回傳陣列格式 [活動1, 活動2, ...]
-                    console.log('使用陣列格式，活動數量:', data.length);
-                    allEvents = data;
-                    registrationCounts = {}; // 暫時沒有報名統計
-                } else if (data && data.events) {
-                    // 如果是包裝格式 {events: [...], registrationCounts: {...}}
-                    console.log('使用物件格式，活動數量:', data.events.length);
-                    allEvents = data.events;
-                    registrationCounts = data.registrationCounts || {};
-                } else {
-                    console.error('未知的資料格式:', data);
-                    throw new Error('資料格式不符預期');
-                }
-        
-                console.log('最終活動數量:', allEvents.length);
-                console.log('報名統計:', registrationCounts);
-        
-                if (allEvents.length > 0) {
-                    console.log('第一個活動:', allEvents[0]);
-                    renderCalendarView();
-                    renderListView();
-                } else {
-                    eventsContainer.innerHTML = '<div class="error-message"><h6>📝 目前沒有可報名的課程</h6><p>請確認據點名稱是否正確，或聯繫主辦單位。</p></div>';
-                }
-        
-            } catch (error) {
-                console.error('載入活動失敗:', error);
-        
-                // 顯示詳細的錯誤訊息
-                let errorMessage = '<div class="error-message">';
-                errorMessage += '<h6>🚨 載入課程資料失敗</h6>';
-        
-                if (error.message.includes('Failed to fetch')) {
-                    errorMessage += '<p><strong>問題：</strong>無法連接到伺服器</p>';
-                    errorMessage += '<p><strong>可能原因：</strong></p>';
-                    errorMessage += '<ul><li>網路連線問題</li><li>Apps Script 服務暫時不可用</li><li>CORS 權限問題</li></ul>';
-                } else if (error.message.includes('HTTP')) {
-                    errorMessage += `<p><strong>HTTP 錯誤：</strong>${error.message}</p>`;
-                } else {
-                    errorMessage += `<p><strong>錯誤詳情：</strong>${error.message}</p>`;
-                }
-        
-                errorMessage += '<p><strong>解決建議：</strong></p>';
-                errorMessage += '<ol>';
-                errorMessage += '<li>檢查網路連線</li>';
-                errorMessage += '<li>重新整理頁面 (F5)</li>';
-                errorMessage += '<li>清除瀏覽器快取 (Ctrl+F5)</li>';
-                errorMessage += '<li>稍後再試</li>';
-                errorMessage += '</ol>';
-                errorMessage += '<button class="btn btn-warning" onclick="loadEvents()">🔄 重新載入</button>';
-                errorMessage += '</div>';
-        
-                eventsContainer.innerHTML = errorMessage;
-            }
+        // 顯示據點信息
+        if (siteKeyword) {
+            document.getElementById('site-info').style.display = 'block';
+            document.getElementById('current-site').textContent = siteKeyword;
         }
         
-        // 檢查活動是否已滿
-        function isEventFull(eventId) {
-            const event = allEvents.find(e => e['活動ID'] === eventId);
-            if (!event || !event['活動人數上限']) return false;
-            
-            const currentCount = registrationCounts[eventId] || 0;
-            const limit = parseInt(event['活動人數上限']);
-            
-            return currentCount >= limit;
-        }
-        
-        // 渲染月曆視圖
-        function renderCalendarView() {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = today.getMonth();
-            
-            const firstDay = new Date(year, month, 1);
-            const lastDay = new Date(year, month + 1, 0);
-            const startDate = new Date(firstDay);
-            startDate.setDate(startDate.getDate() - firstDay.getDay());
-            
-            const calendarGrid = document.getElementById('calendar-grid');
-            calendarGrid.innerHTML = '';
-            
-            // 添加星期標題
-            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-            weekdays.forEach(day => {
-                const headerDiv = document.createElement('div');
-                headerDiv.className = 'calendar-header';
-                headerDiv.textContent = day;
-                calendarGrid.appendChild(headerDiv);
+        loadEvents();
+        setupForm();
+    });
+
+    // 改進的載入活動資料函式
+    async function loadEvents() {
+        addDebugLog('開始載入活動資料...');
+
+        const eventsContainer = document.getElementById('events-container');
+        eventsContainer.innerHTML = '<div class="loading-message">載入中...</div>';
+
+        try {
+            // 構建請求 URL
+            const url = `${APPS_SCRIPT_URL}?mode=events&site=${encodeURIComponent(siteKeyword)}`;
+            addDebugLog(`請求 URL: ${url}`);
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache'
+                }
             });
-            
-            // 生成日期格子
-            for (let i = 0; i < 42; i++) {
-                const currentDate = new Date(startDate);
-                currentDate.setDate(startDate.getDate() + i);
-                
-                const dayDiv = document.createElement('div');
-                dayDiv.className = 'calendar-day';
-                
-                if (currentDate.toDateString() === today.toDateString()) {
-                    dayDiv.classList.add('today');
-                }
-                
-                const dayNumber = document.createElement('div');
-                dayNumber.className = 'day-number';
-                dayNumber.textContent = currentDate.getDate();
-                dayDiv.appendChild(dayNumber);
-                
-                // 添加當天的活動
-                const dayEvents = allEvents.filter(event => {
-                    const eventDate = new Date(event['活動日期']);
-                    return eventDate.toDateString() === currentDate.toDateString();
-                });
-                
-                dayEvents.forEach(event => {
-                    const eventDiv = document.createElement('div');
-                    const eventId = event['活動ID'];
-                    const isFull = isEventFull(eventId);
-                    
-                    eventDiv.className = isFull ? 'event-item full' : 'event-item';
-                    eventDiv.textContent = `${formatTime(event['開始時間'])} ${event['活動標題']}`;
-                    
-                    if (!isFull) {
-                        eventDiv.onclick = () => toggleEventSelection(eventId, eventDiv);
-                    }
-                    
-                    dayDiv.appendChild(eventDiv);
-                });
-                
-                calendarGrid.appendChild(dayDiv);
+
+            addDebugLog(`回應狀態: ${response.status} ${response.statusText}`);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
+
+            const responseText = await response.text();
+            addDebugLog(`回應長度: ${responseText.length} 字元`);
+            addDebugLog(`回應預覽: ${responseText.substring(0, 200)}...`);
+
+            let data;
+            try {
+                data = JSON.parse(responseText);
+                addDebugLog('JSON 解析成功');
+            } catch (jsonError) {
+                addDebugLog(`JSON 解析失敗: ${jsonError.message}`);
+                throw new Error('伺服器回應格式錯誤');
+            }
+
+            // 處理回應資料
+            if (Array.isArray(data)) {
+                addDebugLog(`收到陣列格式資料，活動數量: ${data.length}`);
+                allEvents = data;
+                registrationCounts = {};
+            } else if (data && data.events) {
+                addDebugLog(`收到物件格式資料，活動數量: ${data.events.length}`);
+                allEvents = data.events;
+                registrationCounts = data.registrationCounts || {};
+            } else {
+                addDebugLog('未知的資料格式');
+                throw new Error('資料格式不符預期');
+            }
+
+            addDebugLog(`最終處理結果 - 活動: ${allEvents.length}, 報名統計: ${Object.keys(registrationCounts).length}`);
+
+            if (allEvents.length > 0) {
+                addDebugLog(`第一個活動: ${JSON.stringify(allEvents[0], null, 2)}`);
+                renderCalendarView();
+                renderListView();
+            } else {
+                const noEventsMessage = siteKeyword 
+                    ? `據點「${siteKeyword}」目前沒有可報名的課程`
+                    : '目前沒有可報名的課程';
+                    
+                eventsContainer.innerHTML = `
+                    <div class="error-message">
+                        <h6>📝 ${noEventsMessage}</h6>
+                        <p>請確認據點名稱是否正確，或聯繫主辦單位。</p>
+                        <p><strong>提示：</strong>據點名稱可以包含或不包含 @ 符號</p>
+                    </div>
+                `;
+            }
+
+        } catch (error) {
+            addDebugLog(`載入失敗: ${error.message}`);
+            
+            let errorMessage = '<div class="error-message">';
+            errorMessage += '<h6>🚨 載入課程資料失敗</h6>';
+
+            if (error.message.includes('Failed to fetch')) {
+                errorMessage += '<p><strong>問題：</strong>無法連接到伺服器</p>';
+                errorMessage += '<p><strong>可能原因：</strong></p>';
+                errorMessage += '<ul><li>網路連線問題</li><li>Apps Script 服務暫時不可用</li><li>CORS 權限問題</li></ul>';
+            } else if (error.message.includes('HTTP')) {
+                errorMessage += `<p><strong>HTTP 錯誤：</strong>${error.message}</p>`;
+            } else {
+                errorMessage += `<p><strong>錯誤詳情：</strong>${error.message}</p>`;
+            }
+
+            errorMessage += '<p><strong>解決建議：</strong></p>';
+            errorMessage += '<ol>';
+            errorMessage += '<li>檢查網路連線</li>';
+            errorMessage += '<li>重新整理頁面 (F5)</li>';
+            errorMessage += '<li>清除瀏覽器快取 (Ctrl+F5)</li>';
+            errorMessage += '<li>檢查 Apps Script 部署設定</li>';
+            errorMessage += '</ol>';
+            errorMessage += '<button class="btn btn-warning" onclick="loadEvents()">🔄 重新載入</button>';
+            errorMessage += '<button class="btn btn-secondary ms-2" onclick="toggleDebug()">🔧 查看詳細資訊</button>';
+            errorMessage += '</div>';
+
+            eventsContainer.innerHTML = errorMessage;
         }
+    }
+
+    // 檢查活動是否已滿
+    function isEventFull(eventId) {
+        const event = allEvents.find(e => e['活動ID'] === eventId);
+        if (!event || !event['活動人數上限']) return false;
+
+        const currentCount = registrationCounts[eventId] || 0;
+        const limit = parseInt(event['活動人數上限']);
+
+        return currentCount >= limit;
+    }
+
+    // 渲染月曆視圖
+    function renderCalendarView() {
+        addDebugLog('開始渲染月曆視圖');
         
-        // 渲染清單視圖
-        function renderListView() {
-            const container = document.getElementById('events-container');
-            
-            if (!allEvents || allEvents.length === 0) {
-                container.innerHTML = '<div class="error-message"><h6>📝 目前沒有可報名的課程</h6><p>請確認據點名稱是否正確，或聯繫主辦單位。</p></div>';
-                return;
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth();
+
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const startDate = new Date(firstDay);
+        startDate.setDate(startDate.getDate() - firstDay.getDay());
+
+        const calendarGrid = document.getElementById('calendar-grid');
+        calendarGrid.innerHTML = '';
+
+        // 添加星期標題
+        const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+        weekdays.forEach(day => {
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'calendar-header';
+            headerDiv.textContent = day;
+            calendarGrid.appendChild(headerDiv);
+        });
+
+        // 生成日期格子
+        for (let i = 0; i < 42; i++) {
+            const currentDate = new Date(startDate);
+            currentDate.setDate(startDate.getDate() + i);
+
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'calendar-day';
+
+            if (currentDate.toDateString() === today.toDateString()) {
+                dayDiv.classList.add('today');
             }
-            
-            const html = allEvents.map(event => {
+
+            const dayNumber = document.createElement('div');
+            dayNumber.className = 'day-number';
+            dayNumber.textContent = currentDate.getDate();
+            dayDiv.appendChild(dayNumber);
+
+            // 添加當天的活動
+            const dayEvents = allEvents.filter(event => {
+                const eventDate = new Date(event['活動日期']);
+                return eventDate.toDateString() === currentDate.toDateString();
+            });
+
+            dayEvents.forEach(event => {
+                const eventDiv = document.createElement('div');
                 const eventId = event['活動ID'];
                 const isFull = isEventFull(eventId);
-                const currentCount = registrationCounts[eventId] || 0;
-                const limit = event['活動人數上限'];
-                
-                let capacityInfo = '';
-                if (limit) {
-                    capacityInfo = `<div>👥 名額：${currentCount}/${limit}`;
-                    if (isFull) {
-                        capacityInfo += ' <span class="full-badge">已額滿</span>';
-                    }
-                    capacityInfo += '</div>';
+
+                eventDiv.className = isFull ? 'event-item full' : 'event-item';
+                eventDiv.textContent = `${formatTime(event['開始時間'])} ${event['活動標題']}`;
+
+                if (!isFull) {
+                    eventDiv.onclick = () => toggleEventSelection(eventId, eventDiv);
                 }
-                
-                return `
-                    <div class="event-list-item ${isFull ? 'full' : ''}" data-event-id="${eventId}" onclick="${!isFull ? `toggleEventListSelection(this, '${eventId}')` : ''}">
-                        <div class="d-flex align-items-start">
-                            <input type="checkbox" class="event-checkbox" ${isFull ? 'disabled' : ''} onchange="handleCheckboxChange(this, '${eventId}')">
-                            <div class="flex-grow-1">
-                                <div class="event-title">${event['活動標題']}</div>
-                                <div class="event-details">
-                                    <div>👨‍🏫 講師：${event['講師'] || '待確認'}</div>
-                                    <div>🗓 時間：${formatDate(event['活動日期'])} ${formatTime(event['開始時間'])}${event['結束時間'] ? ' - ' + formatTime(event['結束時間']) : ''}</div>
-                                    <div>📍 地點：${event['地址或地點說明'] || '待確認'}</div>
-                                    ${capacityInfo}
-                                    ${event['活動內容'] ? `<div>📝 內容：${event['活動內容']}</div>` : ''}
-                                    ${event['備註'] ? `<div>⚠️ 備註：${event['備註']}</div>` : ''}
-                                </div>
+
+                dayDiv.appendChild(eventDiv);
+            });
+
+            calendarGrid.appendChild(dayDiv);
+        }
+        
+        addDebugLog('月曆視圖渲染完成');
+    }
+
+    // 渲染清單視圖
+    function renderListView() {
+        addDebugLog('開始渲染清單視圖');
+        
+        const container = document.getElementById('events-container');
+
+        if (!allEvents || allEvents.length === 0) {
+            container.innerHTML = '<div class="error-message"><h6>📝 目前沒有可報名的課程</h6><p>請確認據點名稱是否正確，或聯繫主辦單位。</p></div>';
+            return;
+        }
+
+        const html = allEvents.map(event => {
+            const eventId = event['活動ID'];
+            const isFull = isEventFull(eventId);
+            const currentCount = registrationCounts[eventId] || 0;
+            const limit = event['活動人數上限'];
+
+            let capacityInfo = '';
+            if (limit) {
+                capacityInfo = `<div>👥 名額：${currentCount}/${limit}`;
+                if (isFull) {
+                    capacityInfo += ' <span class="full-badge">已額滿</span>';
+                }
+                capacityInfo += '</div>';
+            }
+
+            return `
+                <div class="event-list-item ${isFull ? 'full' : ''}" data-event-id="${eventId}" onclick="${!isFull ? `toggleEventListSelection(this, '${eventId}')` : ''}">
+                    <div class="d-flex align-items-start">
+                        <input type="checkbox" class="event-checkbox" ${isFull ? 'disabled' : ''} onchange="handleCheckboxChange(this, '${eventId}')">
+                        <div class="flex-grow-1">
+                            <div class="event-title">${event['活動標題']}</div>
+                            <div class="event-details">
+                                <div>👨‍🏫 講師：${event['講師'] || '待確認'}</div>
+                                <div>🗓 時間：${formatDate(event['活動日期'])} ${formatTime(event['開始時間'])}${event['結束時間'] ? ' - ' + formatTime(event['結束時間']) : ''}</div>
+                                <div>📍 地點：${event['地址或地點說明'] || '待確認'}</div>
+                                ${capacityInfo}
+                                ${event['活動內容'] ? `<div>📝 內容：${event['活動內容']}</div>` : ''}
+                                ${event['備註'] ? `<div>⚠️ 備註：${event['備註']}</div>` : ''}
                             </div>
                         </div>
                     </div>
-                `;
-            }).join('');
-            
-            container.innerHTML = html;
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = html;
+        addDebugLog('清單視圖渲染完成');
+    }
+
+    // 切換活動選擇狀態（月曆）
+    function toggleEventSelection(eventId, element) {
+        if (isEventFull(eventId)) return;
+
+        const index = selectedEvents.indexOf(eventId);
+        if (index > -1) {
+            selectedEvents.splice(index, 1);
+            element.classList.remove('selected');
+            addDebugLog(`取消選擇活動: ${eventId}`);
+        } else {
+            selectedEvents.push(eventId);
+            element.classList.add('selected');
+            addDebugLog(`選擇活動: ${eventId}`);
         }
-        
-        // 切換活動選擇狀態（月曆）
-        function toggleEventSelection(eventId, element) {
-            if (isEventFull(eventId)) return;
-            
+        updateCustomFields();
+    }
+
+    // 切換活動選擇狀態（清單）
+    function toggleEventListSelection(element, eventId) {
+        if (isEventFull(eventId)) return;
+
+        const checkbox = element.querySelector('.event-checkbox');
+        checkbox.checked = !checkbox.checked;
+        handleCheckboxChange(checkbox, eventId);
+    }
+
+    // 處理勾選框變化
+    function handleCheckboxChange(checkbox, eventId) {
+        if (isEventFull(eventId)) {
+            checkbox.checked = false;
+            return;
+        }
+
+        const listItem = checkbox.closest('.event-list-item');
+
+        if (checkbox.checked) {
+            selectedEvents.push(eventId);
+            listItem.classList.add('selected');
+            addDebugLog(`勾選活動: ${eventId}`);
+        } else {
             const index = selectedEvents.indexOf(eventId);
             if (index > -1) {
                 selectedEvents.splice(index, 1);
-                element.classList.remove('selected');
-            } else {
-                selectedEvents.push(eventId);
-                element.classList.add('selected');
             }
-            updateCustomFields();
+            listItem.classList.remove('selected');
+            addDebugLog(`取消勾選活動: ${eventId}`);
         }
+        updateCustomFields();
+    }
+
+    // 更新自訂欄位
+    function updateCustomFields() {
+        const customFieldsContainer = document.getElementById('custom-fields');
+        customFieldsContainer.innerHTML = '';
+
+        selectedEvents.forEach(eventId => {
+            const event = allEvents.find(e => e['活動ID'] === eventId);
+            if (event && event['自訂欄位問題']) {
+                const fieldDiv = document.createElement('div');
+                fieldDiv.className = 'custom-field';
+                fieldDiv.innerHTML = `
+                    <label for="custom_${eventId}" class="form-label">
+                        <strong>${event['活動標題']}</strong> - ${event['自訂欄位問題']}
+                    </label>
+                    <textarea class="form-control" id="custom_${eventId}" name="custom_${eventId}" rows="2" placeholder="請輸入您的回答"></textarea>
+                `;
+                customFieldsContainer.appendChild(fieldDiv);
+            }
+        });
         
-        // 切換活動選擇狀態（清單）
-        function toggleEventListSelection(element, eventId) {
-            if (isEventFull(eventId)) return;
-            
-            const checkbox = element.querySelector('.event-checkbox');
-            checkbox.checked = !checkbox.checked;
-            handleCheckboxChange(checkbox, eventId);
-        }
-        
-        // 處理勾選框變化
-        function handleCheckboxChange(checkbox, eventId) {
-            if (isEventFull(eventId)) {
-                checkbox.checked = false;
+        addDebugLog(`更新自訂欄位，選中活動數: ${selectedEvents.length}`);
+    }
+
+    // 視圖切換
+    function showCalendarView() {
+        document.getElementById('calendar-view').style.display = 'block';
+        document.getElementById('list-view').style.display = 'none';
+        addDebugLog('切換到月曆視圖');
+    }
+
+    function showListView() {
+        document.getElementById('calendar-view').style.display = 'none';
+        document.getElementById('list-view').style.display = 'block';
+        addDebugLog('切換到清單視圖');
+    }
+
+    // 設置表單提交
+    function setupForm() {
+        document.getElementById('signup-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            if (selectedEvents.length === 0) {
+                alert('請至少選擇一堂課程');
                 return;
             }
-            
-            const listItem = checkbox.closest('.event-list-item');
-            
-            if (checkbox.checked) {
-                selectedEvents.push(eventId);
-                listItem.classList.add('selected');
-            } else {
-                const index = selectedEvents.indexOf(eventId);
-                if (index > -1) {
-                    selectedEvents.splice(index, 1);
-                }
-                listItem.classList.remove('selected');
+
+            // 檢查選中的活動是否有已滿的
+            const fullEvents = selectedEvents.filter(eventId => isEventFull(eventId));
+            if (fullEvents.length > 0) {
+                alert('您選擇的課程中有已額滿的，請重新選擇');
+                return;
             }
-            updateCustomFields();
-        }
-        
-        // 更新自訂欄位
-        function updateCustomFields() {
-            const customFieldsContainer = document.getElementById('custom-fields');
-            customFieldsContainer.innerHTML = '';
-            
-            selectedEvents.forEach(eventId => {
-                const event = allEvents.find(e => e['活動ID'] === eventId);
-                if (event && event['自訂欄位問題']) {
-                    const fieldDiv = document.createElement('div');
-                    fieldDiv.className = 'custom-field';
-                    fieldDiv.innerHTML = `
-                        <label for="custom_${eventId}" class="form-label">
-                            <strong>${event['活動標題']}</strong> - ${event['自訂欄位問題']}
-                        </label>
-                        <textarea class="form-control" id="custom_${eventId}" name="custom_${eventId}" rows="2" placeholder="請輸入您的回答"></textarea>
-                    `;
-                    customFieldsContainer.appendChild(fieldDiv);
-                }
-            });
-        }
-        
-        // 視圖切換
-        function showCalendarView() {
-            document.getElementById('calendar-view').style.display = 'block';
-            document.getElementById('list-view').style.display = 'none';
-        }
-        
-        function showListView() {
-            document.getElementById('calendar-view').style.display = 'none';
-            document.getElementById('list-view').style.display = 'block';
-        }
-        
-        // 設置表單提交
-        function setupForm() {
-            document.getElementById('signup-form').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                if (selectedEvents.length === 0) {
-                    alert('請至少選擇一堂課程');
-                    return;
-                }
-                
-                // 檢查選中的活動是否有已滿的
-                const fullEvents = selectedEvents.filter(eventId => isEventFull(eventId));
-                if (fullEvents.length > 0) {
-                    alert('您選擇的課程中有已額滿的，請重新選擇');
-                    return;
-                }
-                
-                const formData = new FormData(this);
-                const submitBtn = this.querySelector('button[type="submit"]');
-                
-                try {
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = '報名中...';
-                    
-                    // 為每個選中的活動提交報名
-                    for (const eventId of selectedEvents) {
-                        const registrationData = {
-                            action: 'register',
-                            name: formData.get('name'),
-                            lineName: formData.get('lineName'),
-                            gender: formData.get('gender'),
-                            age: formData.get('age'),
-                            phone: formData.get('phone'),
-                            email: formData.get('email'),
-                            note: formData.get('note'),
-                            eventId: eventId,
-                            lineId: formData.get('lineId')
-                        };
-                        
-                        // 添加自訂欄位回答
-                        const customField = document.getElementById(`custom_${eventId}`);
-                        if (customField) {
-                            registrationData.customFieldAnswer = customField.value;
-                        }
-                        
-                        const response = await fetch(APPS_SCRIPT_URL, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: new URLSearchParams(registrationData)
-                        });
-                        
-                        if (!response.ok) {
-                            throw new Error('報名失敗');
-                        }
+
+            const formData = new FormData(this);
+            const submitBtn = this.querySelector('button[type="submit"]');
+
+            try {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '報名中...';
+                addDebugLog(`開始報名，選中活動: ${selectedEvents.join(', ')}`);
+
+                // 為每個選中的活動提交報名
+                for (const eventId of selectedEvents) {
+                    const registrationData = {
+                        action: 'register',
+                        name: formData.get('name'),
+                        lineName: formData.get('lineName'),
+                        gender: formData.get('gender'),
+                        age: formData.get('age'),
+                        phone: formData.get('phone'),
+                        email: formData.get('email'),
+                        note: formData.get('note'),
+                        eventId: eventId,
+                        lineId: formData.get('lineId')
+                    };
+
+                    // 添加自訂欄位回答
+                    const customField = document.getElementById(`custom_${eventId}`);
+                    if (customField) {
+                        registrationData.customFieldAnswer = customField.value;
+                    }
+
+                    addDebugLog(`提交活動 ${eventId} 的報名資料`);
+
+                    const response = await fetch(APPS_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams(registrationData)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`活動 ${eventId} 報名失敗`);
                     }
                     
-                    alert('報名成功！我們會在活動前一天提醒您。');
-                    location.reload();
-                    
-                } catch (error) {
-                    console.error('報名錯誤:', error);
-                    alert('報名失敗，請稍後再試');
-                } finally {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = '✅ 送出報名';
+                    addDebugLog(`活動 ${eventId} 報名成功`);
                 }
-            });
-        }
-        
-        // 格式化日期
-        function formatDate(dateStr) {
-            if (!dateStr) return '';
-            try {
-                const date = new Date(dateStr);
-                return `${date.getMonth() + 1}/${date.getDate()}`;
-            } catch {
-                return dateStr;
+
+                alert('報名成功！我們會在活動前一天提醒您。');
+                addDebugLog('所有活動報名完成');
+                location.reload();
+
+            } catch (error) {
+                addDebugLog(`報名錯誤: ${error.message}`);
+                alert('報名失敗，請稍後再試');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '✅ 送出報名';
             }
+        });
+    }
+
+    // 格式化日期
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        try {
+            const date = new Date(dateStr);
+            return `${date.getMonth() + 1}/${date.getDate()}`;
+        } catch {
+            return dateStr;
         }
-        
-        // 格式化時間
-        function formatTime(timeStr) {
-            if (!timeStr) return '';
-            try {
-                // 如果是 Date 物件，提取時間部分
-                if (timeStr.toString().includes('1899')) {
-                    const date = new Date(timeStr);
-                    const hours = String(date.getHours()).padStart(2, '0');
-                    const minutes = String(date.getMinutes()).padStart(2, '0');
-                    return `${hours}:${minutes}`;
-                }
-                return timeStr;
-            } catch {
-                return timeStr;
+    }
+
+    // 格式化時間
+    function formatTime(timeStr) {
+        if (!timeStr) return '';
+        try {
+            // 如果是 Date 物件，提取時間部分
+            if (timeStr.toString().includes('1899')) {
+                const date = new Date(timeStr);
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${hours}:${minutes}`;
             }
+            return timeStr;
+        } catch {
+            return timeStr;
         }
+    }
+
+    // 測試連接功能
+    function testConnection() {
+        addDebugLog('=== 開始測試連接 ===');
         
-        // 除錯函式 - 測試連接
-        function testConnection() {
-            console.log('測試 Apps Script 連接...');
-            fetch(`${APPS_SCRIPT_URL}?mode=events&site=`)
-                .then(response => {
-                    console.log('測試回應:', response.status, response.statusText);
-                    return response.text();
-                })
-                .then(text => {
-                    console.log('測試內容:', text.substring(0, 500));
-                })
-                .catch(error => {
-                    console.error('測試失敗:', error);
-                });
-        }
-        
-        // 如果需要除錯，可以在 Console 中執行 testConnection()
-        window.testConnection = testConnection;
-    </script>
+        fetch(`${APPS_SCRIPT_URL}?mode=events&site=`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        })
+        .then(response => {
+            addDebugLog(`測試連接回應: ${response.status} ${response.statusText}`);
+            return response.text();
+        })
+        .then(text => {
+            addDebugLog(`測試連接內容長度: ${text.length}`);
+            addDebugLog(`測試連接內容預覽: ${text.substring(0, 200)}...`);
+            
+            try {
+                const data = JSON.parse(text);
+                addDebugLog(`測試連接 JSON 解析成功，活動數: ${data.events ? data.events.length : '未知'}`);
+            } catch (e) {
+                addDebugLog(`測試連接 JSON 解析失敗: ${e.message}`);
+            }
+        })
+        .catch(error => {
+            addDebugLog(`測試連接失敗: ${error.message}`);
+        });
+    }
+
+    // 全域函數供 Console 使用
+    window.testConnection = testConnection;
+    window.toggleDebug = toggleDebug;
+    window.addDebugLog = addDebugLog;
+</script>
 </body>
 </html>
