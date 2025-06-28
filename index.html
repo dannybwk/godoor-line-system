@@ -1,101 +1,489 @@
-// ===== Config.gs =====
-const SHEET_ID = '13IwMmUYPOCrQOpF7yBnjtM0whoMOxfQb2wpQkoPGYnY';
-const LINE_CHANNEL_ACCESS_TOKEN = '5kEpFZCsp8+Ia4/dSTkMQ2PvybJFlZ9hkhxqSl76lf7GHw/3tKenyddqh+ndBHws+aEr25QY7uc3DMJsllW5JhftSPmXSXGIltzEw/JhFuyRENL2qSWZEYCUTVwiILjD2KTg5SD9vW6lT4g5bBcurwdB04t89/1O/w1cDnyilFU=';
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>課程報名系統</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-// ===== Main.gs =====
-function doGet(e) {
-  const params = e.parameter || {};
-  const mode = params.mode;
-  const site = params.site || '';
-  
-  try {
-    if (mode === 'events') {
-      return getEvents(site);
-    }
-    
-    return createJsonResponse({ error: 'Invalid mode' });
-  } catch (error) {
-    return createJsonResponse({ error: error.toString() });
-  }
-}
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
 
-function doPost(e) {
-  const params = e.parameter || {};
-  const action = params.action;
-  
-  try {
-    if (action === 'register') {
-      return registerEvent(params);
-    }
-    
-    return createJsonResponse({ error: 'Invalid action' });
-  } catch (error) {
-    return createJsonResponse({ error: error.toString() });
-  }
-}
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
 
-function getEvents(site) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('活動總表');
-  const data = sheet.getDataRange().getValues();
-  
-  if (data.length <= 1) {
-    return createJsonResponse([]);
-  }
-  
-  const headers = data[0];
-  const rows = data.slice(1);
-  
-  // 轉換為物件陣列
-  let events = rows.map(row => {
-    const event = {};
-    headers.forEach((header, index) => {
-      event[header] = row[index];
-    });
-    return event;
-  });
-  
-  // 據點篩選
-  if (site) {
-    events = events.filter(event => {
-      const organizer = (event['活動主辦人或單位'] || '').toString();
-      return organizer.includes(site) || 
-             organizer.includes(site.replace('@', '')) ||
-             (`@${organizer}`).includes(site);
-    });
-  }
-  
-  return createJsonResponse(events);
-}
+        .header {
+            background: #ff9800;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
 
-function registerEvent(params) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('報名紀錄表');
-  const now = new Date();
-  
-  const row = [
-    Utilities.formatDate(now, 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss'),
-    params.name || '',
-    params.lineName || '',
-    params.lineId || '',
-    params.email || '',
-    params.phone || '',
-    params.note || '',
-    params.eventId || '',
-    '',
-    params.gender || '',
-    params.age || '',
-    params.customFieldAnswer || ''
-  ];
-  
-  sheet.appendRow(row);
-  
-  return createJsonResponse({ 
-    status: 'success', 
-    message: '報名成功' 
-  });
-}
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
 
-function createJsonResponse(data) {
-  return ContentService
-    .createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+        .site-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #ff9800;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #f57c00;
+        }
+
+        .btn-outline {
+            background: white;
+            color: #ff9800;
+            border: 2px solid #ff9800;
+        }
+
+        .btn-outline:hover {
+            background: #ff9800;
+            color: white;
+        }
+
+        .events-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .event-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .event-card:hover {
+            border-color: #ff9800;
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.15);
+        }
+
+        .event-card.selected {
+            border-color: #4caf50;
+            background: #f1f8e9;
+        }
+
+        .event-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .event-checkbox {
+            width: 20px;
+            height: 20px;
+            margin-right: 15px;
+        }
+
+        .event-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #ff9800;
+            margin: 0;
+        }
+
+        .event-details {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .event-details div {
+            margin-bottom: 8px;
+        }
+
+        .form-section {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-top: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .required {
+            color: #f44336;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #ff9800;
+            box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.1);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #f44336;
+        }
+
+        .success {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #4caf50;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .view-toggle {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍊 課程報名系統</h1>
+            <p>選擇您想參加的課程</p>
+        </div>
+
+        <div id="siteInfo" class="site-info hidden">
+            <strong>📍 當前據點：</strong><span id="currentSite"></span>
+        </div>
+
+        <div class="view-toggle">
+            <button class="btn btn-primary" onclick="loadEvents()">🔄 重新載入</button>
+            <button class="btn btn-outline" onclick="clearSelection()">🗑️ 清除選擇</button>
+        </div>
+
+        <div id="eventsContainer">
+            <div class="loading">載入中...</div>
+        </div>
+
+        <div class="form-section">
+            <h3 style="margin-bottom: 20px; color: #ff9800;">📝 報名資料</h3>
+            <form id="signupForm">
+                <div class="form-group">
+                    <label class="form-label">姓名 <span class="required">*</span></label>
+                    <input type="text" class="form-control" name="name" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">LINE名稱 <span class="required">*</span></label>
+                    <input type="text" class="form-control" name="lineName" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">手機號碼 <span class="required">*</span></label>
+                    <input type="tel" class="form-control" name="phone" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">電子郵件</label>
+                    <input type="email" class="form-control" name="email">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">性別</label>
+                    <select class="form-control" name="gender">
+                        <option value="">請選擇</option>
+                        <option value="男">男</option>
+                        <option value="女">女</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">年齡</label>
+                    <input type="number" class="form-control" name="age" min="1" max="120">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">備註</label>
+                    <textarea class="form-control" name="note" rows="3"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 15px; font-size: 18px;">
+                    ✅ 送出報名
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 配置
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxpDCRA2PJXLy8ssWwG3NO4QZzg87gmUdB1vHWjYNdf9jmz-ku0yfnovhtfz58ep0oE/exec';
+        
+        // 狀態
+        let events = [];
+        let selectedEventIds = [];
+        
+        // 從 URL 獲取據點參數
+        const urlParams = new URLSearchParams(window.location.search);
+        const siteKeyword = urlParams.get('site') || '';
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            if (siteKeyword) {
+                document.getElementById('siteInfo').classList.remove('hidden');
+                document.getElementById('currentSite').textContent = siteKeyword;
+            }
+            
+            loadEvents();
+            setupForm();
+        });
+
+        // 載入活動
+        async function loadEvents() {
+            const container = document.getElementById('eventsContainer');
+            container.innerHTML = '<div class="loading">載入中...</div>';
+
+            try {
+                const url = `${API_URL}?mode=events&site=${encodeURIComponent(siteKeyword)}`;
+                console.log('載入 URL:', url);
+                
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('收到資料:', data);
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                events = Array.isArray(data) ? data : data.events || [];
+                console.log('活動數量:', events.length);
+                
+                renderEvents();
+                
+            } catch (error) {
+                console.error('載入錯誤:', error);
+                container.innerHTML = `
+                    <div class="error">
+                        <h4>載入失敗</h4>
+                        <p>錯誤：${error.message}</p>
+                        <p>請檢查網路連線或稍後再試</p>
+                        <button class="btn btn-primary" onclick="loadEvents()">重新載入</button>
+                    </div>
+                `;
+            }
+        }
+
+        // 渲染活動列表
+        function renderEvents() {
+            const container = document.getElementById('eventsContainer');
+            
+            if (events.length === 0) {
+                container.innerHTML = `
+                    <div class="error">
+                        <h4>沒有找到課程</h4>
+                        <p>目前沒有可報名的課程</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = events.map(event => `
+                <div class="event-card" data-event-id="${event['活動ID']}" onclick="toggleEvent('${event['活動ID']}')">
+                    <div class="event-header">
+                        <input type="checkbox" class="event-checkbox" ${selectedEventIds.includes(event['活動ID']) ? 'checked' : ''}>
+                        <h3 class="event-title">${event['活動標題']}</h3>
+                    </div>
+                    <div class="event-details">
+                        <div>👨‍🏫 講師：${event['講師'] || '待確認'}</div>
+                        <div>📅 日期：${formatDate(event['活動日期'])}</div>
+                        <div>🕐 時間：${formatTime(event['開始時間'])}</div>
+                        <div>📍 地點：${event['地址或地點說明'] || '待確認'}</div>
+                        ${event['活動內容'] ? `<div>📋 內容：${event['活動內容']}</div>` : ''}
+                        ${event['備註'] ? `<div>⚠️ 備註：${event['備註']}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = `<div class="events-grid">${html}</div>`;
+        }
+
+        // 切換活動選擇
+        function toggleEvent(eventId) {
+            const index = selectedEventIds.indexOf(eventId);
+            const card = document.querySelector(`[data-event-id="${eventId}"]`);
+            const checkbox = card.querySelector('.event-checkbox');
+            
+            if (index > -1) {
+                selectedEventIds.splice(index, 1);
+                card.classList.remove('selected');
+                checkbox.checked = false;
+            } else {
+                selectedEventIds.push(eventId);
+                card.classList.add('selected');
+                checkbox.checked = true;
+            }
+        }
+
+        // 清除選擇
+        function clearSelection() {
+            selectedEventIds = [];
+            document.querySelectorAll('.event-card').forEach(card => {
+                card.classList.remove('selected');
+                card.querySelector('.event-checkbox').checked = false;
+            });
+        }
+
+        // 設置表單
+        function setupForm() {
+            document.getElementById('signupForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                if (selectedEventIds.length === 0) {
+                    alert('請至少選擇一個課程');
+                    return;
+                }
+
+                const formData = new FormData(this);
+                const submitBtn = this.querySelector('button[type="submit"]');
+                
+                submitBtn.disabled = true;
+                submitBtn.textContent = '報名中...';
+
+                try {
+                    for (const eventId of selectedEventIds) {
+                        const data = new URLSearchParams({
+                            action: 'register',
+                            eventId: eventId,
+                            name: formData.get('name'),
+                            lineName: formData.get('lineName'),
+                            phone: formData.get('phone'),
+                            email: formData.get('email'),
+                            gender: formData.get('gender'),
+                            age: formData.get('age'),
+                            note: formData.get('note')
+                        });
+
+                        const response = await fetch(API_URL, {
+                            method: 'POST',
+                            body: data
+                        });
+
+                        const result = await response.json();
+                        
+                        if (result.error) {
+                            throw new Error(result.error);
+                        }
+                    }
+
+                    alert('報名成功！');
+                    this.reset();
+                    clearSelection();
+                    
+                } catch (error) {
+                    alert('報名失敗：' + error.message);
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '✅ 送出報名';
+                }
+            });
+        }
+
+        // 格式化日期
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            try {
+                const date = new Date(dateStr);
+                return `${date.getMonth() + 1}/${date.getDate()}`;
+            } catch {
+                return dateStr;
+            }
+        }
+
+        // 格式化時間
+        function formatTime(timeStr) {
+            if (!timeStr) return '';
+            try {
+                if (timeStr.toString().includes('1899')) {
+                    const date = new Date(timeStr);
+                    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                }
+                return timeStr;
+            } catch {
+                return timeStr;
+            }
+        }
+    </script>
+</body>
+</html>
