@@ -228,18 +228,14 @@ h1, h5 {
     color: #f57c00;
 }
 
-/* 調試信息樣式 */
-.debug-info {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 5px;
-    padding: 10px;
-    margin: 10px 0;
-    font-family: monospace;
-    font-size: 12px;
-    color: #495057;
-    max-height: 200px;
-    overflow-y: auto;
+/* 隱藏 iframe */
+.hidden-iframe {
+    position: absolute;
+    top: -1000px;
+    left: -1000px;
+    width: 1px;
+    height: 1px;
+    border: none;
 }
 </style>
 </head>
@@ -273,20 +269,6 @@ h1, h5 {
         <h5 class="mb-3">📋 請勾選想報名的課程</h5>
         <div id="events-container">
             <div class="loading-message">載入中...</div>
-        </div>
-    </div>
-
-    <!-- 調試面板 -->
-    <div id="debug-panel" style="display: none;">
-        <div class="card mt-3">
-            <div class="card-header">
-                <h6 class="mb-0">🔧 調試信息</h6>
-            </div>
-            <div class="card-body">
-                <div id="debug-info" class="debug-info"></div>
-                <button class="btn btn-sm btn-secondary" onclick="testConnection()">測試連接</button>
-                <button class="btn btn-sm btn-secondary" onclick="toggleDebug()">隱藏調試</button>
-            </div>
         </div>
     </div>
 
@@ -342,16 +324,14 @@ h1, h5 {
         </form>
     </div>
 
-    <!-- 顯示調試按鈕 -->
-    <div class="text-center mt-3">
-        <button class="btn btn-sm btn-outline-secondary" onclick="toggleDebug()">🔧 顯示調試面板</button>
-    </div>
-
     <div class="footer">
         Powered by <span style="color:#f07f2f;font-weight:bold">果多</span><br>
         <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" width="50" />
     </div>
 </div>
+
+<!-- 隱藏的 iframe 用於載入資料 -->
+<iframe id="data-loader" class="hidden-iframe"></iframe>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
@@ -367,27 +347,10 @@ h1, h5 {
     const urlParams = new URLSearchParams(window.location.search);
     const siteKeyword = urlParams.get('site') || '';
 
-    // 調試功能
-    function addDebugLog(message) {
-        const debugInfo = document.getElementById('debug-info');
-        if (debugInfo) {
-            const timestamp = new Date().toLocaleTimeString();
-            debugInfo.innerHTML += `[${timestamp}] ${message}\n`;
-            debugInfo.scrollTop = debugInfo.scrollHeight;
-        }
-        console.log(message);
-    }
-
-    function toggleDebug() {
-        const debugPanel = document.getElementById('debug-panel');
-        debugPanel.style.display = debugPanel.style.display === 'none' ? 'block' : 'none';
-    }
-
     // 頁面載入時初始化
     document.addEventListener('DOMContentLoaded', function() {
-        addDebugLog('頁面載入完成');
-        addDebugLog(`據點參數: "${siteKeyword}"`);
-        addDebugLog(`Apps Script URL: ${APPS_SCRIPT_URL}`);
+        console.log('頁面載入完成');
+        console.log(`據點參數: "${siteKeyword}"`);
         
         // 顯示據點信息
         if (siteKeyword) {
@@ -399,90 +362,103 @@ h1, h5 {
         setupForm();
     });
 
-    // JSONP 載入活動資料 - 解決 CORS 問題
+    // 使用 iframe 載入活動資料 - 避免 CORS 問題
     function loadEvents() {
-        addDebugLog('開始載入活動資料...');
+        console.log('開始載入活動資料...');
 
         const eventsContainer = document.getElementById('events-container');
         eventsContainer.innerHTML = '<div class="loading-message">載入中...</div>';
 
         try {
-            // 使用動態 script 標籤避免 CORS 問題
-            const script = document.createElement('script');
-            const callbackName = 'jsonpCallback_' + Date.now();
+            // 建立請求 URL
+            const url = `${APPS_SCRIPT_URL}?mode=events&site=${encodeURIComponent(siteKeyword)}`;
+            console.log(`請求 URL: ${url}`);
             
-            // 建立全域回調函數
-            window[callbackName] = function(data) {
-                addDebugLog('JSONP 回調成功');
-                addDebugLog(`收到資料類型: ${Array.isArray(data) ? '陣列' : '物件'}`);
-                
-                // 處理回應資料
-                if (Array.isArray(data)) {
-                    addDebugLog(`使用陣列格式，活動數量: ${data.length}`);
-                    allEvents = data;
-                    registrationCounts = {};
-                } else if (data && data.events) {
-                    addDebugLog(`使用物件格式，活動數量: ${data.events.length}`);
-                    allEvents = data.events;
-                    registrationCounts = data.registrationCounts || {};
-                } else {
-                    addDebugLog('未知的資料格式');
-                    throw new Error('資料格式不符預期');
-                }
+            // 使用 iframe 載入
+            const iframe = document.getElementById('data-loader');
+            
+            // 設定載入完成的處理
+            iframe.onload = function() {
+                try {
+                    // 嘗試從 iframe 獲取內容
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    const content = iframeDoc.body.textContent || iframeDoc.body.innerText;
+                    
+                    console.log('iframe 載入完成，內容長度:', content.length);
+                    console.log('內容預覽:', content.substring(0, 200));
+                    
+                    // 解析 JSON
+                    const data = JSON.parse(content);
+                    console.log('JSON 解析成功');
+                    
+                    // 處理回應資料
+                    if (Array.isArray(data)) {
+                        console.log(`使用陣列格式，活動數量: ${data.length}`);
+                        allEvents = data;
+                        registrationCounts = {};
+                    } else if (data && data.events) {
+                        console.log(`使用物件格式，活動數量: ${data.events.length}`);
+                        allEvents = data.events;
+                        registrationCounts = data.registrationCounts || {};
+                    } else {
+                        console.log('未知的資料格式');
+                        throw new Error('資料格式不符預期');
+                    }
 
-                addDebugLog(`最終處理結果 - 活動: ${allEvents.length}, 報名統計: ${Object.keys(registrationCounts).length}`);
+                    console.log(`最終處理結果 - 活動: ${allEvents.length}, 報名統計: ${Object.keys(registrationCounts).length}`);
 
-                if (allEvents.length > 0) {
-                    addDebugLog(`第一個活動: ${allEvents[0]['活動標題']}`);
-                    renderCalendarView();
-                    renderListView();
-                } else {
-                    const noEventsMessage = siteKeyword 
-                        ? `據點「${siteKeyword}」目前沒有可報名的課程`
-                        : '目前沒有可報名的課程';
-                        
+                    if (allEvents.length > 0) {
+                        console.log(`第一個活動: ${allEvents[0]['活動標題']}`);
+                        renderCalendarView();
+                        renderListView();
+                    } else {
+                        const noEventsMessage = siteKeyword 
+                            ? `據點「${siteKeyword}」目前沒有可報名的課程`
+                            : '目前沒有可報名的課程';
+                            
+                        eventsContainer.innerHTML = `
+                            <div class="error-message">
+                                <h6>📝 ${noEventsMessage}</h6>
+                                <p>請確認據點名稱是否正確，或聯繫主辦單位。</p>
+                            </div>
+                        `;
+                    }
+
+                } catch (parseError) {
+                    console.error('解析資料失敗:', parseError);
                     eventsContainer.innerHTML = `
                         <div class="error-message">
-                            <h6>📝 ${noEventsMessage}</h6>
-                            <p>請確認據點名稱是否正確，或聯繫主辦單位。</p>
+                            <h6>🚨 載入課程資料失敗</h6>
+                            <p><strong>資料解析錯誤：</strong>${parseError.message}</p>
+                            <button class="btn btn-warning" onclick="loadEvents()">🔄 重新載入</button>
                         </div>
                     `;
                 }
-
-                // 清理回調函數和 script 標籤
-                delete window[callbackName];
-                document.head.removeChild(script);
             };
 
-            // 建立請求 URL
-            const url = `${APPS_SCRIPT_URL}?mode=events&site=${encodeURIComponent(siteKeyword)}&callback=${callbackName}`;
-            addDebugLog(`JSONP 請求 URL: ${url}`);
-            
-            script.src = url;
-            script.onerror = function() {
-                addDebugLog('JSONP 載入失敗');
+            // 設定錯誤處理
+            iframe.onerror = function() {
+                console.error('iframe 載入失敗');
                 eventsContainer.innerHTML = `
                     <div class="error-message">
                         <h6>🚨 載入課程資料失敗</h6>
-                        <p><strong>JSONP 請求失敗</strong></p>
-                        <p><strong>可能原因：</strong></p>
+                        <p><strong>網路連接問題</strong></p>
+                        <p>可能原因：</p>
                         <ul>
                             <li>Apps Script 服務暫時不可用</li>
                             <li>網路連線問題</li>
-                            <li>Apps Script 程式碼錯誤</li>
+                            <li>伺服器暫時無回應</li>
                         </ul>
                         <button class="btn btn-warning" onclick="loadEvents()">🔄 重新載入</button>
-                        <button class="btn btn-secondary ms-2" onclick="toggleDebug()">🔧 查看詳細資訊</button>
                     </div>
                 `;
-                delete window[callbackName];
-                document.head.removeChild(script);
             };
 
-            document.head.appendChild(script);
+            // 開始載入
+            iframe.src = url;
 
         } catch (error) {
-            addDebugLog(`載入失敗: ${error.message}`);
+            console.error(`載入失敗: ${error.message}`);
             eventsContainer.innerHTML = `
                 <div class="error-message">
                     <h6>🚨 載入課程資料失敗</h6>
@@ -506,7 +482,7 @@ h1, h5 {
 
     // 渲染月曆視圖
     function renderCalendarView() {
-        addDebugLog('開始渲染月曆視圖');
+        console.log('開始渲染月曆視圖');
         
         const today = new Date();
         const year = today.getFullYear();
@@ -570,12 +546,12 @@ h1, h5 {
             calendarGrid.appendChild(dayDiv);
         }
         
-        addDebugLog('月曆視圖渲染完成');
+        console.log('月曆視圖渲染完成');
     }
 
     // 渲染清單視圖
     function renderListView() {
-        addDebugLog('開始渲染清單視圖');
+        console.log('開始渲染清單視圖');
         
         const container = document.getElementById('events-container');
 
@@ -620,7 +596,7 @@ h1, h5 {
         }).join('');
 
         container.innerHTML = html;
-        addDebugLog('清單視圖渲染完成');
+        console.log('清單視圖渲染完成');
     }
 
     // 切換活動選擇狀態（月曆）
@@ -631,11 +607,9 @@ h1, h5 {
         if (index > -1) {
             selectedEvents.splice(index, 1);
             element.classList.remove('selected');
-            addDebugLog(`取消選擇活動: ${eventId}`);
         } else {
             selectedEvents.push(eventId);
             element.classList.add('selected');
-            addDebugLog(`選擇活動: ${eventId}`);
         }
         updateCustomFields();
     }
@@ -661,14 +635,12 @@ h1, h5 {
         if (checkbox.checked) {
             selectedEvents.push(eventId);
             listItem.classList.add('selected');
-            addDebugLog(`勾選活動: ${eventId}`);
         } else {
             const index = selectedEvents.indexOf(eventId);
             if (index > -1) {
                 selectedEvents.splice(index, 1);
             }
             listItem.classList.remove('selected');
-            addDebugLog(`取消勾選活動: ${eventId}`);
         }
         updateCustomFields();
     }
@@ -692,21 +664,17 @@ h1, h5 {
                 customFieldsContainer.appendChild(fieldDiv);
             }
         });
-        
-        addDebugLog(`更新自訂欄位，選中活動數: ${selectedEvents.length}`);
     }
 
     // 視圖切換
     function showCalendarView() {
         document.getElementById('calendar-view').style.display = 'block';
         document.getElementById('list-view').style.display = 'none';
-        addDebugLog('切換到月曆視圖');
     }
 
     function showListView() {
         document.getElementById('calendar-view').style.display = 'none';
         document.getElementById('list-view').style.display = 'block';
-        addDebugLog('切換到清單視圖');
     }
 
     // 設置表單提交
@@ -732,7 +700,6 @@ h1, h5 {
             try {
                 submitBtn.disabled = true;
                 submitBtn.textContent = '報名中...';
-                addDebugLog(`開始報名，選中活動: ${selectedEvents.join(', ')}`);
 
                 // 為每個選中的活動提交報名
                 for (const eventId of selectedEvents) {
@@ -755,8 +722,6 @@ h1, h5 {
                         registrationData.customFieldAnswer = customField.value;
                     }
 
-                    addDebugLog(`提交活動 ${eventId} 的報名資料`);
-
                     const response = await fetch(APPS_SCRIPT_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -766,16 +731,13 @@ h1, h5 {
                     if (!response.ok) {
                         throw new Error(`活動 ${eventId} 報名失敗`);
                     }
-                    
-                    addDebugLog(`活動 ${eventId} 報名成功`);
                 }
 
                 alert('報名成功！我們會在活動前一天提醒您。');
-                addDebugLog('所有活動報名完成');
                 location.reload();
 
             } catch (error) {
-                addDebugLog(`報名錯誤: ${error.message}`);
+                console.error(`報名錯誤: ${error.message}`);
                 alert('報名失敗，請稍後再試');
             } finally {
                 submitBtn.disabled = false;
@@ -811,17 +773,6 @@ h1, h5 {
             return timeStr;
         }
     }
-
-    // 測試連接功能
-    function testConnection() {
-        addDebugLog('=== 開始測試連接 ===');
-        loadEvents();
-    }
-
-    // 全域函數供 Console 使用
-    window.testConnection = testConnection;
-    window.toggleDebug = toggleDebug;
-    window.addDebugLog = addDebugLog;
 </script>
 </body>
 </html>
