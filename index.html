@@ -360,7 +360,7 @@ h1, h5 {
     let selectedEvents = [];
     let registrationCounts = {};
 
-    // ⚠️ 重要：請替換為您實際的 Apps Script URL
+    // Apps Script URL
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxpDCRA2PJXLy8ssWwG3NO4QZzg87gmUdB1vHWjYNdf9jmz-ku0yfnovhtfz58ep0oE/exec';
 
     // 從 URL 取得據點參數
@@ -399,107 +399,97 @@ h1, h5 {
         setupForm();
     });
 
-    // 改進的載入活動資料函式
-    async function loadEvents() {
+    // JSONP 載入活動資料 - 解決 CORS 問題
+    function loadEvents() {
         addDebugLog('開始載入活動資料...');
 
         const eventsContainer = document.getElementById('events-container');
         eventsContainer.innerHTML = '<div class="loading-message">載入中...</div>';
 
         try {
-            // 構建請求 URL
-            const url = `${APPS_SCRIPT_URL}?mode=events&site=${encodeURIComponent(siteKeyword)}`;
-            addDebugLog(`請求 URL: ${url}`);
-
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'Cache-Control': 'no-cache'
+            // 使用動態 script 標籤避免 CORS 問題
+            const script = document.createElement('script');
+            const callbackName = 'jsonpCallback_' + Date.now();
+            
+            // 建立全域回調函數
+            window[callbackName] = function(data) {
+                addDebugLog('JSONP 回調成功');
+                addDebugLog(`收到資料類型: ${Array.isArray(data) ? '陣列' : '物件'}`);
+                
+                // 處理回應資料
+                if (Array.isArray(data)) {
+                    addDebugLog(`使用陣列格式，活動數量: ${data.length}`);
+                    allEvents = data;
+                    registrationCounts = {};
+                } else if (data && data.events) {
+                    addDebugLog(`使用物件格式，活動數量: ${data.events.length}`);
+                    allEvents = data.events;
+                    registrationCounts = data.registrationCounts || {};
+                } else {
+                    addDebugLog('未知的資料格式');
+                    throw new Error('資料格式不符預期');
                 }
-            });
 
-            addDebugLog(`回應狀態: ${response.status} ${response.statusText}`);
+                addDebugLog(`最終處理結果 - 活動: ${allEvents.length}, 報名統計: ${Object.keys(registrationCounts).length}`);
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
+                if (allEvents.length > 0) {
+                    addDebugLog(`第一個活動: ${allEvents[0]['活動標題']}`);
+                    renderCalendarView();
+                    renderListView();
+                } else {
+                    const noEventsMessage = siteKeyword 
+                        ? `據點「${siteKeyword}」目前沒有可報名的課程`
+                        : '目前沒有可報名的課程';
+                        
+                    eventsContainer.innerHTML = `
+                        <div class="error-message">
+                            <h6>📝 ${noEventsMessage}</h6>
+                            <p>請確認據點名稱是否正確，或聯繫主辦單位。</p>
+                        </div>
+                    `;
+                }
 
-            const responseText = await response.text();
-            addDebugLog(`回應長度: ${responseText.length} 字元`);
-            addDebugLog(`回應預覽: ${responseText.substring(0, 200)}...`);
+                // 清理回調函數和 script 標籤
+                delete window[callbackName];
+                document.head.removeChild(script);
+            };
 
-            let data;
-            try {
-                data = JSON.parse(responseText);
-                addDebugLog('JSON 解析成功');
-            } catch (jsonError) {
-                addDebugLog(`JSON 解析失敗: ${jsonError.message}`);
-                throw new Error('伺服器回應格式錯誤');
-            }
-
-            // 處理回應資料
-            if (Array.isArray(data)) {
-                addDebugLog(`收到陣列格式資料，活動數量: ${data.length}`);
-                allEvents = data;
-                registrationCounts = {};
-            } else if (data && data.events) {
-                addDebugLog(`收到物件格式資料，活動數量: ${data.events.length}`);
-                allEvents = data.events;
-                registrationCounts = data.registrationCounts || {};
-            } else {
-                addDebugLog('未知的資料格式');
-                throw new Error('資料格式不符預期');
-            }
-
-            addDebugLog(`最終處理結果 - 活動: ${allEvents.length}, 報名統計: ${Object.keys(registrationCounts).length}`);
-
-            if (allEvents.length > 0) {
-                addDebugLog(`第一個活動: ${JSON.stringify(allEvents[0], null, 2)}`);
-                renderCalendarView();
-                renderListView();
-            } else {
-                const noEventsMessage = siteKeyword 
-                    ? `據點「${siteKeyword}」目前沒有可報名的課程`
-                    : '目前沒有可報名的課程';
-                    
+            // 建立請求 URL
+            const url = `${APPS_SCRIPT_URL}?mode=events&site=${encodeURIComponent(siteKeyword)}&callback=${callbackName}`;
+            addDebugLog(`JSONP 請求 URL: ${url}`);
+            
+            script.src = url;
+            script.onerror = function() {
+                addDebugLog('JSONP 載入失敗');
                 eventsContainer.innerHTML = `
                     <div class="error-message">
-                        <h6>📝 ${noEventsMessage}</h6>
-                        <p>請確認據點名稱是否正確，或聯繫主辦單位。</p>
-                        <p><strong>提示：</strong>據點名稱可以包含或不包含 @ 符號</p>
+                        <h6>🚨 載入課程資料失敗</h6>
+                        <p><strong>JSONP 請求失敗</strong></p>
+                        <p><strong>可能原因：</strong></p>
+                        <ul>
+                            <li>Apps Script 服務暫時不可用</li>
+                            <li>網路連線問題</li>
+                            <li>Apps Script 程式碼錯誤</li>
+                        </ul>
+                        <button class="btn btn-warning" onclick="loadEvents()">🔄 重新載入</button>
+                        <button class="btn btn-secondary ms-2" onclick="toggleDebug()">🔧 查看詳細資訊</button>
                     </div>
                 `;
-            }
+                delete window[callbackName];
+                document.head.removeChild(script);
+            };
+
+            document.head.appendChild(script);
 
         } catch (error) {
             addDebugLog(`載入失敗: ${error.message}`);
-            
-            let errorMessage = '<div class="error-message">';
-            errorMessage += '<h6>🚨 載入課程資料失敗</h6>';
-
-            if (error.message.includes('Failed to fetch')) {
-                errorMessage += '<p><strong>問題：</strong>無法連接到伺服器</p>';
-                errorMessage += '<p><strong>可能原因：</strong></p>';
-                errorMessage += '<ul><li>網路連線問題</li><li>Apps Script 服務暫時不可用</li><li>CORS 權限問題</li></ul>';
-            } else if (error.message.includes('HTTP')) {
-                errorMessage += `<p><strong>HTTP 錯誤：</strong>${error.message}</p>`;
-            } else {
-                errorMessage += `<p><strong>錯誤詳情：</strong>${error.message}</p>`;
-            }
-
-            errorMessage += '<p><strong>解決建議：</strong></p>';
-            errorMessage += '<ol>';
-            errorMessage += '<li>檢查網路連線</li>';
-            errorMessage += '<li>重新整理頁面 (F5)</li>';
-            errorMessage += '<li>清除瀏覽器快取 (Ctrl+F5)</li>';
-            errorMessage += '<li>檢查 Apps Script 部署設定</li>';
-            errorMessage += '</ol>';
-            errorMessage += '<button class="btn btn-warning" onclick="loadEvents()">🔄 重新載入</button>';
-            errorMessage += '<button class="btn btn-secondary ms-2" onclick="toggleDebug()">🔧 查看詳細資訊</button>';
-            errorMessage += '</div>';
-
-            eventsContainer.innerHTML = errorMessage;
+            eventsContainer.innerHTML = `
+                <div class="error-message">
+                    <h6>🚨 載入課程資料失敗</h6>
+                    <p><strong>錯誤詳情：</strong>${error.message}</p>
+                    <button class="btn btn-warning" onclick="loadEvents()">🔄 重新載入</button>
+                </div>
+            `;
         }
     }
 
@@ -825,32 +815,7 @@ h1, h5 {
     // 測試連接功能
     function testConnection() {
         addDebugLog('=== 開始測試連接 ===');
-        
-        fetch(`${APPS_SCRIPT_URL}?mode=events&site=`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
-            }
-        })
-        .then(response => {
-            addDebugLog(`測試連接回應: ${response.status} ${response.statusText}`);
-            return response.text();
-        })
-        .then(text => {
-            addDebugLog(`測試連接內容長度: ${text.length}`);
-            addDebugLog(`測試連接內容預覽: ${text.substring(0, 200)}...`);
-            
-            try {
-                const data = JSON.parse(text);
-                addDebugLog(`測試連接 JSON 解析成功，活動數: ${data.events ? data.events.length : '未知'}`);
-            } catch (e) {
-                addDebugLog(`測試連接 JSON 解析失敗: ${e.message}`);
-            }
-        })
-        .catch(error => {
-            addDebugLog(`測試連接失敗: ${error.message}`);
-        });
+        loadEvents();
     }
 
     // 全域函數供 Console 使用
