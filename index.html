@@ -57,8 +57,8 @@ body {
 }
 
 .logo-icon {
-    width: 32px;
-    height: 32px;
+    width: 64px;
+    height: 64px;
     vertical-align: middle;
     margin-right: 8px;
     border-radius: 4px;
@@ -436,6 +436,29 @@ body {
     border-left: 4px solid #4caf50;
 }
 
+/* 頁面底部樣式 */
+.footer {
+    text-align: center;
+    padding: 40px 20px 20px;
+    margin-top: 50px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.footer-text {
+    color: #666;
+    font-size: 16px;
+    margin-bottom: 15px;
+}
+
+.footer-logo {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto;
+    display: block;
+    border-radius: 8px;
+    opacity: 0.8;
+}
+
 .hidden {
     display: none;
 }
@@ -453,8 +476,8 @@ body {
     }
 
     .logo-icon {
-        width: 28px;
-        height: 28px;
+        width: 56px;
+        height: 56px;
         margin-right: 0;
         margin-bottom: 4px;
     }
@@ -615,6 +638,14 @@ body {
                 ✅ 送出報名
             </button>
         </form>
+    </div>
+    
+    <!-- 頁面底部 -->
+    <div class="footer">
+        <div class="footer-text">Powered by 果多</div>
+        <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" 
+             alt="果多" 
+             class="footer-logo">
     </div>
 </div>
 
@@ -854,10 +885,29 @@ function createCalendarDay(dayNumber, isOtherMonth) {
             
             eventDiv.textContent = displayText;
             
+            // 設定提示文字 - 修正報名狀況顯示邏輯
+            const currentCount = event.currentRegistrations || 0;
             let tooltipText = `${event['活動標題']}\n講師：${event['講師'] || '待確認'}\n時間：${timeStr}`;
+            
             if (event['活動人數上限'] && !isNaN(parseInt(event['活動人數上限']))) {
-                tooltipText += `\n報名：${event.currentRegistrations}/${event['活動人數上限']}`;
+                const maxCapacity = parseInt(event['活動人數上限']);
+                if (currentCount === 0) {
+                    tooltipText += `\n報名：報名中/${maxCapacity}`;
+                } else if (event.isFull) {
+                    tooltipText += `\n報名：${currentCount}/${maxCapacity} (已額滿)`;
+                } else if (event.remainingSlots <= 3) {
+                    tooltipText += `\n報名：即將額滿/${maxCapacity}`;
+                } else {
+                    tooltipText += `\n報名：${currentCount}/${maxCapacity}`;
+                }
+            } else {
+                if (currentCount === 0) {
+                    tooltipText += `\n報名：報名中`;
+                } else {
+                    tooltipText += `\n報名：${currentCount}人已報名`;
+                }
             }
+            
             eventDiv.title = tooltipText;
 
             eventDiv.onclick = (e) => {
@@ -918,16 +968,28 @@ function renderEventsList() {
     const html = sortedEvents.map(event => {
         const isFull = event.isFull;
         const hasLimit = event['活動人數上限'] && !isNaN(parseInt(event['活動人數上限']));
+        const currentCount = event.currentRegistrations || 0;
         const isWarning = hasLimit && event.remainingSlots <= 3 && !isFull;
         
         let capacityInfo = '';
         if (hasLimit) {
+            const maxCapacity = parseInt(event['活動人數上限']);
+            let displayText = '';
+            
+            if (currentCount === 0) {
+                displayText = `報名中/${maxCapacity}`;
+            } else if (isFull) {
+                displayText = `${currentCount}/${maxCapacity}`;
+            } else if (isWarning) {
+                displayText = `即將額滿/${maxCapacity}`;
+            } else {
+                displayText = `${currentCount}/${maxCapacity}`;
+            }
+            
             const capacityClass = isFull ? 'capacity-full' : 
                                  isWarning ? 'capacity-warning' : 
                                  'capacity-available';
-            capacityInfo = `<span class="capacity-info ${capacityClass}">
-                ${event.currentRegistrations}/${event['活動人數上限']}
-            </span>`;
+            capacityInfo = `<span class="capacity-info ${capacityClass}">${displayText}</span>`;
         }
 
         return `
@@ -948,7 +1010,13 @@ function renderEventsList() {
                     <div>📅 日期：${formatDate(event['活動日期'])}</div>
                     <div>🕐 時間：${formatTime(event['開始時間'])}</div>
                     <div>📍 地點：${event['地址或地點說明'] || '待確認'}</div>
-                    ${hasLimit ? `<div>👥 報名狀況：${event.currentRegistrations}/${event['活動人數上限']} ${isFull ? '(已額滿)' : isWarning ? '(即將額滿)' : ''}</div>` : ''}
+                    ${hasLimit ? 
+                        `<div>👥 報名狀況：${currentCount === 0 ? '報名中' : 
+                            isFull ? `${currentCount}/${event['活動人數上限']} (已額滿)` : 
+                            isWarning ? `即將額滿/${event['活動人數上限']}` : 
+                            `${currentCount}/${event['活動人數上限']}`}</div>` : 
+                        `<div>👥 報名狀況：${currentCount === 0 ? '報名中' : `${currentCount}人已報名`}</div>`
+                    }
                     ${event['活動內容'] ? `<div>📋 內容：${event['活動內容']}</div>` : ''}
                     ${event['備註'] ? `<div>⚠️ 備註：${event['備註']}</div>` : ''}
                     ${event['自訂欄位問題'] ? `<div>❓ 問題：${event['自訂欄位問題']}</div>` : ''}
@@ -1023,9 +1091,22 @@ function updateSelectedSummary() {
     );
 
     const html = selectedEvents.map(event => {
+        const currentCount = event.currentRegistrations || 0;
         let capacityText = '';
+        
         if (event['活動人數上限'] && !isNaN(parseInt(event['活動人數上限']))) {
-            capacityText = ` (${event.currentRegistrations}/${event['活動人數上限']})`;
+            const maxCapacity = parseInt(event['活動人數上限']);
+            if (currentCount === 0) {
+                capacityText = ` (報名中/${maxCapacity})`;
+            } else {
+                capacityText = ` (${currentCount}/${maxCapacity})`;
+            }
+        } else {
+            if (currentCount === 0) {
+                capacityText = ' (報名中)';
+            } else {
+                capacityText = ` (${currentCount}人已報名)`;
+            }
         }
         
         return `
@@ -1364,11 +1445,9 @@ async function getUserProfile() {
 function showLiffStatus() {
     const header = document.querySelector('.header p');
     if (header && userProfile) {
-        header.innerHTML = `選擇您想參加的課程<br><small style="color: rgba(255,255,255,0.8);">👋 歡迎，${userProfile.displayName}！</small>`;
+        header.innerHTML = `選擇您想參加的課程<br><small style="color: rgba(255,255,255,0.8);">👋 歡迎，${userProfile.displayName}！已連接到您的 LINE 帳號</small>`;
     }
 }
 </script>
 </body>
 </html>
-
-//
