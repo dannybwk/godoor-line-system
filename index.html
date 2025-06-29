@@ -51,6 +51,19 @@ body {
 .header h1 {
     font-size: 28px;
     margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-icon {
+    width: 32px;
+    height: 32px;
+    vertical-align: middle;
+    margin-right: 8px;
+    border-radius: 4px;
+    background: white;
+    padding: 2px;
 }
 
 .site-info {
@@ -435,6 +448,15 @@ body {
 
     .header h1 {
         font-size: 24px;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .logo-icon {
+        width: 28px;
+        height: 28px;
+        margin-right: 0;
+        margin-bottom: 4px;
     }
 
     .view-toggle {
@@ -499,7 +521,12 @@ body {
     <div id="siteTitleHeader" class="site-title hidden"></div>
 
     <div class="header">
-        <h1>🍊 活動報名表單</h1>
+        <h1>
+            <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" 
+                 alt="果多" 
+                 class="logo-icon"> 
+            活動報名表單
+        </h1>
         <p>選擇您想參加的課程</p>
     </div>
 
@@ -669,11 +696,6 @@ async function loadEvents() {
                 <h4>載入失敗</h4>
                 <p>錯誤：${error.message}</p>
                 <p>請檢查網路連線或稍後再試</p>
-                <button class="btn btn-primary" onclick="loadEvents()">重新載入</button>
-            </div>
-        `;
-    }
-}
 
 // 切換到月曆檢視
 function switchToCalendar() {
@@ -1281,6 +1303,7 @@ document.addEventListener('visibilitychange', function() {
 
 // 設定初始載入時間
 localStorage.setItem('lastEventLoad', Date.now().toString());
+
 /**
  * LIFF 相關函式
  */
@@ -1342,4 +1365,379 @@ function showLiffStatus() {
 }
 </script>
 </body>
-</html>
+</html>15px;
+}
+
+.event-checkbox {
+    width: 20px;
+    height: 20px;
+    margin-right: 15px;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.event-checkbox:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.event-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #ff9800;
+    margin: 0;
+    line-height: 1.3;
+    flex-grow: 1;
+}
+
+.event-title.full {
+    color: #f44336;
+}
+
+.event-details {
+    color: #666;
+    font-size: 18px;
+    line-height: 1.5;
+}
+
+.event-details div {
+    margin-bottom: 8px;
+}
+
+/* 表單樣式 */
+.form-section {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    margin-top: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #333;
+    font-size: 18px;
+}
+
+.required {
+    color: #f44336;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 18px;
+    transition: border-color 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #ff9800;
+    box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.1);
+}
+
+.custom-fields {
+    background: #fff3e0;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+    border-left: 4px solid #ff9800;
+}
+
+.custom-fields h4 {
+    color: #f57c00;
+    margin-bottom: 15px;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    font-size: 20px;
+}
+
+.error {
+    background: #ffebee;
+    color: #c62828;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #f44336;
+    font-size: 18px;
+}
+
+.success {
+    background: #e8f5e8;
+    color: #2e7d32;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #4caf50;
+}
+
+.hidden {
+    display: none;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+    }
+
+    .header h1 {
+        font-size: 24px;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .logo-icon {
+        width: 28px;
+        height: 28px;
+        margin-right: 0;
+        margin-bottom: 4px;
+    }
+
+    .view-toggle {
+        flex-direction: column;
+    }
+
+    .calendar-header {
+        font-size: 20px;
+        padding: 15px;
+    }
+
+    .calendar-day {
+        min-height: 100px;
+        padding: 6px;
+    }
+
+    .calendar-event {
+        font-size: 14px;
+        padding: 4px 6px;
+        margin-bottom: 2px;
+    }
+
+    .event-card {
+        padding: 20px;
+    }
+
+    .event-title {
+        font-size: 18px;
+    }
+
+    .form-control {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .calendar-weekday {
+        padding: 8px 4px;
+        font-size: 14px;
+    }
+
+    .calendar-day {
+        min-height: 70px;
+        padding: 3px;
+    }
+
+    .day-number {
+        font-size: 12px;
+    }
+
+    .calendar-event {
+        font-size: 11px;
+        padding: 2px 3px;
+        margin-bottom: 1px;
+    }
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <!-- 據點名稱大標題 -->
+    <div id="siteTitleHeader" class="site-title hidden"></div>
+
+    <div class="header">
+        <h1>
+            <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" 
+                 alt="果多" 
+                 class="logo-icon"> 
+            活動報名表單
+        </h1>
+        <p>選擇您想參加的課程</p>
+    </div>
+
+    <div id="siteInfo" class="site-info hidden">
+        <strong>📍 當前據點：</strong><span id="currentSite"></span>
+    </div>
+
+    <div class="view-toggle">
+        <button class="btn btn-primary" onclick="loadEvents()">🔄 重新載入</button>
+        <button class="btn btn-outline" id="calendarViewBtn" onclick="switchToCalendar()">📅 月曆檢視</button>
+        <button class="btn btn-outline" id="listViewBtn" onclick="switchToList()">📋 列表檢視</button>
+        <button class="btn btn-outline" onclick="clearSelection()">🗑️ 清除選擇</button>
+    </div>
+
+    <!-- 月曆檢視 -->
+    <div id="calendarView" class="calendar-container hidden">
+        <div class="calendar-header">
+            <button class="month-nav" onclick="changeMonth(-1)">‹</button>
+            <span id="currentMonth"></span>
+            <button class="month-nav" onclick="changeMonth(1)">›</button>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
+
+    <!-- 列表檢視 -->
+    <div id="listView">
+        <div id="eventsContainer">
+            <div class="loading">載入中...</div>
+        </div>
+    </div>
+
+    <!-- 已選課程摘要 -->
+    <div id="selectedSummary" class="hidden" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #4caf50;">
+        <h3 style="color: #4caf50; margin-bottom: 10px;">✅ 已選擇的課程</h3>
+        <div id="selectedList"></div>
+    </div>
+
+    <div class="form-section">
+        <h3 style="margin-bottom: 20px; color: #ff9800;">📝 報名資料</h3>
+        <form id="signupForm">
+            <div class="form-group">
+                <label class="form-label">姓名 <span class="required">*</span></label>
+                <input type="text" class="form-control" name="name" required placeholder="請輸入您的姓名">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">LINE名稱 <span class="required">*</span></label>
+                <input type="text" class="form-control" name="lineName" required placeholder="請輸入您在LINE上顯示的名稱">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">手機號碼 <span class="required">*</span></label>
+                <input type="tel" class="form-control" name="phone" required placeholder="例如：0912345678">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">電子郵件</label>
+                <input type="email" class="form-control" name="email" placeholder="例如：example@gmail.com">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">性別</label>
+                <select class="form-control" name="gender">
+                    <option value="">請選擇</option>
+                    <option value="男">男</option>
+                    <option value="女">女</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">年齡</label>
+                <input type="number" class="form-control" name="age" min="1" max="120" placeholder="請輸入您的年齡">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">備註</label>
+                <textarea class="form-control" name="note" rows="3" placeholder="如有特殊需求或想要補充的資訊，請在此填寫"></textarea>
+            </div>
+            <!-- 隱藏的 LINE ID 欄位 -->
+                <input type="hidden" name="lineId" id="lineIdField">
+            <!-- 自訂欄位區域 -->
+            <div id="customFields" class="hidden"></div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 15px; font-size: 18px;">
+                ✅ 送出報名
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+// 配置
+const API_URL = 'https://script.google.com/macros/s/AKfycbxpDCRA2PJXLy8ssWwG3NO4QZzg87gmUdB1vHWjYNdf9jmz-ku0yfnovhtfz58ep0oE/exec';
+
+// LIFF 配置
+const LIFF_ID = '2007618883-ewZnj9Py'; // 請替換為實際的 LIFF ID
+let userProfile = null;
+let isLiffReady = false;
+
+// 狀態
+let events = [];
+let selectedEventIds = [];
+let currentView = 'list';
+let currentDate = new Date();
+
+// 從 URL 獲取據點參數
+const urlParams = new URLSearchParams(window.location.search);
+const siteKeyword = urlParams.get('site') || '';
+
+// 初始化
+document.addEventListener('DOMContentLoaded', function() {
+    if (siteKeyword) {
+        document.getElementById('siteInfo').classList.remove('hidden');
+        document.getElementById('currentSite').textContent = siteKeyword;
+
+        // 顯示據點名稱大標題
+        const siteTitleHeader = document.getElementById('siteTitleHeader');
+        siteTitleHeader.textContent = siteKeyword;
+        siteTitleHeader.classList.remove('hidden');
+    }
+
+    loadEvents();
+    setupForm();
+    updateViewButtons();
+    
+    // 新增：初始化 LIFF
+    initializeLiff();
+});
+
+// 載入活動
+async function loadEvents() {
+    const container = document.getElementById('eventsContainer');
+    container.innerHTML = '<div class="loading">載入中...</div>';
+
+    try {
+        const url = `${API_URL}?mode=events&site=${encodeURIComponent(siteKeyword)}`;
+        console.log('載入 URL:', url);
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('收到資料:', data);
+
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
+        events = Array.isArray(data) ? data : data.events || [];
+        console.log('活動數量:', events.length);
+
+        // 根據當前檢視模式渲染
+        if (currentView === 'calendar') {
+            renderCalendar();
+        } else {
+            renderEventsList();
+        }
+
+    } catch (error) {
+        console.error('載入錯誤:', error);
+        container.innerHTML = `
+            <div class="error">
+                <h4>載入失敗</h4>
+                <p>錯誤：${error.message}</p>
+                <p>請檢查網路連線或稍後再試</p
