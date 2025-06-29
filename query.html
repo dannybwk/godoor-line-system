@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>查詢我的報名記錄 - 果多</title>
+<!-- LIFF SDK -->
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+    color: #333;
+    line-height: 1.6;
+    font-size: 18px;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.header {
+    background: #ff9800;
+    color: white;
+    padding: 25px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.header h1 {
+    font-size: 28px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-icon {
+    width: 64px;
+    height: 64px;
+    vertical-align: middle;
+    margin-right: 12px;
+    border-radius: 8px;
+    background: white;
+    padding: 4px;
+}
+
+.back-btn {
+    background: rgba(255,255,255,0.2);
+    border: 1px solid white;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    display: inline-block;
+    margin-bottom: 15px;
+    font-size: 16px;
+}
+
+.back-btn:hover {
+    background: rgba(255,255,255,0.3);
+    color: white;
+    text-decoration: none;
+}
+
+/* 查詢表單區域 */
+.query-section {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.query-section h2 {
+    color: #ff9800;
+    font-size: 24px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.query-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-label {
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 8px;
+    font-size: 18px;
+}
+
+.form-control {
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 18px;
+    transition: border-color 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #ff9800;
+    box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.1);
+}
+
+.btn {
+    padding: 15px 30px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 500;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.btn-primary {
+    background: #ff9800;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #f57c00;
+}
+
+.btn-outline {
+    background: white;
+    color: #ff9800;
+    border: 2px solid #ff9800;
+}
+
+.btn-outline:hover {
+    background: #ff9800;
+    color: white;
+}
+
+/* LIFF 狀態顯示 */
+.liff-status {
+    background: #e3f2fd;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid #2196f3;
+    font-size: 16px;
+}
+
+/* 結果顯示區域 */
+.results-section {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.results-header {
+    color: #ff9800;
+    font-size: 24px;
+    margin-bottom: 20px;
+    text-align: center;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #ff9800;
+}
+
+.record-card {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: all 0.2s;
+}
+
+.record-card:hover {
+    border-color: #ff9800;
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.15);
+}
+
+.record-card.upcoming {
+    border-left: 6px solid #4caf50;
+    background: #f1f8e9;
+}
+
+.record-card.completed {
+    border-left: 6px solid #9e9e9e;
+    background: #f5f5f5;
+}
+
+.record-card.cancelled {
+    border-left: 6px solid #f44336;
+    background: #ffebee;
+}
+
+.record-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #ff9800;
+    margin-bottom: 10px;
+}
+
+.record-details {
+    color: #666;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.record-details div {
+    margin-bottom: 8px;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+    margin-top: 10px;
+}
+
+.status-upcoming {
+    background: #4caf50;
+}
+
+.status-completed {
+    background: #9e9e9e;
+}
+
+.status-cancelled {
+    background: #f44336;
+}
+
+.no-records {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    font-size: 18px;
+}
+
+.no-records img {
+    width: 80px;
+    height: 80px;
+    opacity: 0.5;
+    margin-bottom: 20px;
+}
+
+/* 統計摘要 */
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.stat-item {
+    background: #ff9800;
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 24px;
+    font-weight: bold;
+    display: block;
+}
+
+.stat-label {
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+/* 載入狀態 */
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    font-size: 18px;
+}
+
+.error {
+    background: #ffebee;
+    color: #c62828;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #f44336;
+    margin-bottom: 20px;
+}
+
+.hidden {
+    display: none;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+    }
+
+    .header h1 {
+        font-size: 24px;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .logo-icon {
+        width: 56px;
+        height: 56px;
+        margin-right: 0;
+    }
+
+    .query-section, .results-section {
+        padding: 20px;
+    }
+
+    .summary-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .record-card {
+        padding: 15px;
+    }
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <!-- 頁面標題 -->
+    <div class="header">
+        <a href="index.html" class="back-btn">← 回到課程報名</a>
+        <h1>
+            <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" 
+                 alt="果多" 
+                 class="logo-icon"> 
+            查詢我的報名記錄
+        </h1>
+        <p>檢視您報名的所有課程</p>
+    </div>
+
+    <!-- LIFF 狀態顯示 -->
+    <div id="liffStatus" class="liff-status hidden">
+        <strong>🔗 LINE 連線狀態：</strong><span id="liffStatusText">檢查中...</span>
+    </div>
+
+    <!-- 查詢表單區域 -->
+    <div class="query-section">
+        <h2>🔍 請輸入查詢資訊</h2>
+        
+        <form id="queryForm" class="query-form">
+            <div class="form-group">
+                <label class="form-label">查詢方式</label>
+                <select class="form-control" id="queryMethod" onchange="toggleQueryFields()">
+                    <option value="auto">自動識別 (LINE用戶)</option>
+                    <option value="phone">手機號碼查詢</option>
+                    <option value="name">姓名 + 手機查詢</option>
+                </select>
+            </div>
+
+            <!-- 手機號碼查詢 -->
+            <div class="form-group" id="phoneGroup">
+                <label class="form-label">手機號碼 *</label>
+                <input type="tel" class="form-control" id="phoneInput" 
+                       placeholder="請輸入報名時使用的手機號碼">
+            </div>
+
+            <!-- 姓名查詢 -->
+            <div class="form-group hidden" id="nameGroup">
+                <label class="form-label">姓名 *</label>
+                <input type="text" class="form-control" id="nameInput" 
+                       placeholder="請輸入報名時使用的姓名">
+            </div>
+
+            <!-- 據點篩選 -->
+            <div class="form-group">
+                <label class="form-label">據點篩選 (選填)</label>
+                <select class="form-control" id="siteFilter">
+                    <option value="">所有據點</option>
+                    <option value="@歡銀學堂">歡銀學堂</option>
+                    <option value="@測試據點">測試據點</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                🔍 查詢我的報名記錄
+            </button>
+        </form>
+    </div>
+
+    <!-- 查詢結果區域 -->
+    <div id="resultsSection" class="results-section hidden">
+        <h3 class="results-header">📋 我的報名記錄</h3>
+        
+        <!-- 統計摘要 -->
+        <div id="summaryStats" class="summary-stats">
+            <div class="stat-item">
+                <span class="stat-number" id="totalCount">0</span>
+                <span class="stat-label">總報名數</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="upcomingCount">0</span>
+                <span class="stat-label">即將到來</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="completedCount">0</span>
+                <span class="stat-label">已完成</span>
+            </div>
+        </div>
+
+        <!-- 報名記錄列表 -->
+        <div id="recordsList">
+            <!-- 動態生成報名記錄 -->
+        </div>
+    </div>
+
+    <!-- 頁面底部 -->
+    <div style="text-align: center; padding: 40px 20px 20px; margin-top: 50px; border-top: 1px solid #e0e0e0;">
+        <div style="color: #666; font-size: 16px; margin-bottom: 15px;">Powered by 果多</div>
+        <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" 
+             alt="果多" 
+             style="width: 80px; height: 80px; border-radius: 8px; opacity: 0.8;">
+    </div>
+</div>
+
+<script>
+// 配置
+const API_URL = 'https://script.google.com/macros/s/AKfycbxpDCRA2PJXLy8ssWwG3NO4QZzg87gmUdB1vHWjYNdf9jmz-ku0yfnovhtfz58ep0oE/exec';
+const LIFF_ID = '2007618883-ewZnj9Py';
+
+// 全域變數
+let userProfile = null;
+let isLiffReady = false;
+let currentRecords = [];
+
+// 初始化
+document.addEventListener('DOMContentLoaded', function() {
+    initializePage();
+    setupEventListeners();
+    initializeLiff();
+});
+
+/**
+ * 初始化頁面
+ */
+function initializePage() {
+    // 從 URL 參數獲取據點資訊
+    const urlParams = new URLSearchParams(window.location.search);
+    const siteParam = urlParams.get('site');
+    
+    if (siteParam) {
+        document.getElementById('siteFilter').value = siteParam;
+    }
+}
+
+/**
+ * 設定事件監聽器
+ */
+function setupEventListeners() {
+    document.getElementById('queryForm').addEventListener('submit', handleQuery);
+}
+
+/**
+ * 初始化 LIFF
+ */
+async function initializeLiff() {
+    try {
+        console.log('🔄 初始化 LIFF...');
+        
+        if (typeof liff === 'undefined') {
+            console.log('⚠️ 不在 LIFF 環境中');
+            showLiffStatus('不在 LINE 環境中，請手動輸入查詢資訊', 'warning');
+            return;
+        }
+        
+        await liff.init({ liffId: LIFF_ID });
+        
+        if (liff.isLoggedIn()) {
+            console.log('✅ LIFF 登入成功');
+            await getUserProfile();
+            isLiffReady = true;
+            showLiffStatus(`已連線 LINE 帳號：${userProfile.displayName}`, 'success');
+            
+            // 自動設定查詢方式為自動識別
+            document.getElementById('queryMethod').value = 'auto';
+            toggleQueryFields();
+            
+        } else {
+            console.log('❌ LIFF 未登入');
+            showLiffStatus('請在 LINE 中開啟此頁面', 'warning');
+        }
+        
+    } catch (error) {
+        console.error('❌ LIFF 初始化失敗:', error);
+        showLiffStatus('LINE 連線失敗，請手動查詢', 'error');
+    }
+}
+
+/**
+ * 取得使用者資料
+ */
+async function getUserProfile() {
+    try {
+        userProfile = await liff.getProfile();
+        console.log('👤 LIFF 使用者資料:', userProfile);
+    } catch (error) {
+        console.error('❌ 取得使用者資料失敗:', error);
+    }
+}
+
+/**
+ * 顯示 LIFF 狀態
+ */
+function showLiffStatus(message, type = 'info') {
+    const statusDiv = document.getElementById('liffStatus');
+    const statusText = document.getElementById('liffStatusText');
+    
+    statusText.textContent = message;
+    statusDiv.classList.remove('hidden');
+    
+    // 根據類型設定顏色
+    statusDiv.style.backgroundColor = type === 'success' ? '#e8f5e8' : 
+                                    type === 'warning' ? '#fff3e0' : 
+                                    type === 'error' ? '#ffebee' : '#e3f2fd';
+    statusDiv.style.borderLeftColor = type === 'success' ? '#4caf50' : 
+                                     type === 'warning' ? '#ff9800' : 
+                                     type === 'error' ? '#f44336' : '#2196f3';
+}
+
+/**
+ * 切換查詢欄位顯示
+ */
+function toggleQueryFields() {
+    const method = document.getElementById('queryMethod').value;
+    const phoneGroup = document.getElementById('phoneGroup');
+    const nameGroup = document.getElementById('nameGroup');
+    const phoneInput = document.getElementById('phoneInput');
+    const nameInput = document.getElementById('nameInput');
+    
+    if (method === 'auto') {
+        phoneGroup.classList.add('hidden');
+        nameGroup.classList.add('hidden');
+        phoneInput.required = false;
+        nameInput.required = false;
+    } else if (method === 'phone') {
+        phoneGroup.classList.remove('hidden');
+        nameGroup.classList.add('hidden');
+        phoneInput.required = true;
+        nameInput.required = false;
+    } else if (method === 'name') {
+        phoneGroup.classList.remove('hidden');
+        nameGroup.classList.remove('hidden');
+        phoneInput.required = true;
+        nameInput.required = true;
+    }
+}
+
+/**
+ * 處理查詢請求
+ */
+async function handleQuery(e) {
+    e.preventDefault();
+    
+    const method = document.getElementById('queryMethod').value;
+    const phone = document.getElementById('phoneInput').value.trim();
+    const name = document.getElementById('nameInput').value.trim();
+    const site = document.getElementById('siteFilter').value;
+    
+    // 驗證輸入
+    if (method === 'auto' && !isLiffReady) {
+        showError('無法自動識別，請選擇其他查詢方式');
+        return;
+    }
+    
+    if (method === 'phone' && !phone) {
+        showError('請輸入手機號碼');
+        return;
+    }
+    
+    if (method === 'name' && (!name || !phone)) {
+        showError('請輸入姓名和手機號碼');
+        return;
+    }
+    
+    // 顯示載入狀態
+    showLoading();
+    
+    try {
+        const queryParams = {
+            action: 'queryUserRecords',
+            method: method,
+            site: site
+        };
+        
+        if (method === 'auto') {
+            queryParams.lineId = userProfile.userId;
+            queryParams.lineName = userProfile.displayName;
+        } else if (method === 'phone') {
+            queryParams.phone = phone;
+        } else if (method === 'name') {
+            queryParams.name = name;
+            queryParams.phone = phone;
+        }
+        
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams(queryParams)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            currentRecords = result.records || [];
+            displayResults(currentRecords);
+        } else {
+            showError(result.error || '查詢失敗，請稍後再試');
+        }
+        
+    } catch (error) {
+        console.error('查詢錯誤:', error);
+        showError('網路連線失敗，請檢查網路後重試');
+    }
+}
+
+/**
+ * 顯示查詢結果
+ */
+function displayResults(records) {
+    const resultsSection = document.getElementById('resultsSection');
+    const recordsList = document.getElementById('recordsList');
+    
+    resultsSection.classList.remove('hidden');
+    
+    if (records.length === 0) {
+        recordsList.innerHTML = `
+            <div class="no-records">
+                <img src="https://godoor.umita.tw/wp-content/uploads/2023/10/%E6%9E%9C%E5%A4%9A-Logo-%E7%B0%A1%E5%96%AE%E5%BD%A9%E7%89%88-300x300.png" alt="果多">
+                <div>目前沒有找到報名記錄</div>
+                <div style="font-size: 16px; color: #999; margin-top: 10px;">
+                    請確認輸入的資訊是否正確，或聯繫服務人員
+                </div>
+            </div>
+        `;
+        updateSummaryStats(0, 0, 0);
+        return;
+    }
+    
+    // 分類記錄
+    const now = new Date();
+    const upcoming = records.filter(r => new Date(r['活動日期']) > now);
+    const completed = records.filter(r => new Date(r['活動日期']) <= now);
+    
+    // 更新統計
+    updateSummaryStats(records.length, upcoming.length, completed.length);
+    
+    // 排序：即將到來的在前，按日期排序
+    const sortedRecords = [...upcoming, ...completed].sort((a, b) => {
+        return new Date(b['活動日期']) - new Date(a['活動日期']);
+    });
+    
+    // 渲染記錄卡片
+    recordsList.innerHTML = sortedRecords.map(record => renderRecordCard(record)).join('');
+}
+
+/**
+ * 渲染單個報名記錄卡片
+ */
+function renderRecordCard(record) {
+    const eventDate = new Date(record['活動日期']);
+    const now = new Date();
+    const isUpcoming = eventDate > now;
+    
+    const statusClass = isUpcoming ? 'upcoming' : 'completed';
+    const statusBadge = isUpcoming ? 'status-upcoming' : 'status-completed';
+    const statusText = isUpcoming ? '即將到來' : '已完成';
+    
+    return `
+        <div class="record-card ${statusClass}">
+            <div class="record-title">${record['活動標題'] || '未設定標題'}</div>
+            <div class="record-details">
+                <div>👨‍🏫 <strong>講師：</strong>${record['講師'] || '待確認'}</div>
+                <div>📅 <strong>日期：</strong>${formatDate(record['活動日期'])}</div>
+                <div>🕐 <strong>時間：</strong>${formatTime(record['開始時間'])}</div>
+                <div>📍 <strong>地點：</strong>${record['地址或地點說明'] || '詳見活動說明'}</div>
+                <div>📞 <strong>報名手機：</strong>${record['手機號碼']}</div>
+                <div>📝 <strong>報名時間：</strong>${formatDateTime(record['報名時間'])}</div>
+                ${record['自訂欄位回答'] ? `<div>💬 <strong>問題回答：</strong>${record['自訂欄位回答']}</div>` : ''}
+                ${record['備註'] ? `<div>📋 <strong>備註：</strong>${record['備註']}</div>` : ''}
+            </div>
+            <span class="status-badge ${statusBadge}">${statusText}</span>
+        </div>
+    `;
+}
+
+/**
+ * 更新統計摘要
+ */
+function updateSummaryStats(total, upcoming, completed) {
+    document.getElementById('totalCount').textContent = total;
+    document.getElementById('upcomingCount').textContent = upcoming;
+    document.getElementById('completedCount').textContent = completed;
+}
+
+/**
+ * 顯示載入狀態
+ */
+function showLoading() {
+    const resultsSection = document.getElementById('resultsSection');
+    resultsSection.classList.remove('hidden');
+    resultsSection.innerHTML = `
+        <div class="loading">
+            🔄 查詢中，請稍候...
+        </div>
+    `;
+}
+
+/**
+ * 顯示錯誤訊息
+ */
+function showError(message) {
+    const resultsSection = document.getElementById('resultsSection');
+    resultsSection.classList.remove('hidden');
+    resultsSection.innerHTML = `
+        <div class="error">
+            <h4>❌ 查詢失敗</h4>
+            <p>${message}</p>
+        </div>
+    `;
+}
+
+/**
+ * 格式化日期
+ */
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    try {
+        const date = new Date(dateStr);
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+        const weekday = weekdays[date.getDay()];
+        return `${month}/${day} (${weekday})`;
+    } catch {
+        return dateStr;
+    }
+}
+
+/**
+ * 格式化時間
+ */
+function formatTime(timeStr) {
+    if (!timeStr) return '';
+    try {
+        if (timeStr.toString().includes('1899')) {
+            const date = new Date(timeStr);
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
+        return timeStr;
+    } catch {
+        return timeStr;
+    }
+}
+
+/**
+ * 格式化日期時間
+ */
+function formatDateTime(dateTimeStr) {
+    if (!dateTimeStr) return '';
+    try {
+        const date = new Date(dateTimeStr);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}/${month}/${day} ${hours}:${minutes}`;
+    } catch {
+        return dateTimeStr;
+    }
+}
+
+// 頁面可見性變更時重新檢查 LIFF 狀態
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && typeof liff !== 'undefined') {
+        // 頁面重新可見時，重新檢查 LIFF 狀態
+        if (liff.isLoggedIn() && !isLiffReady) {
+            initializeLiff();
+        }
+    }
+});
+</script>
+</body>
+</html>
