@@ -1445,7 +1445,7 @@ async function getUserProfile() {
 function showLiffStatus() {
     const header = document.querySelector('.header p');
     if (header && userProfile) {
-        header.innerHTML = `選擇您想參加的課程<br><small style="color: rgba(255,255,255,0.8);">👋 歡迎，${userProfile.displayName}！已連接到您的 LINE 帳號</small>`;
+        header.innerHTML = `選擇您想參加的課程<br><small style="color: rgba(255,255,255,0.8);">👋 歡迎，${userProfile.displayName}！</small>`;
     }
 }
 </script>
