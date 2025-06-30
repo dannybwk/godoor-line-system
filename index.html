@@ -562,8 +562,6 @@ body {
         <button class="btn btn-outline" id="calendarViewBtn" onclick="switchToCalendar()">📅 月曆檢視</button>
         <button class="btn btn-outline" id="listViewBtn" onclick="switchToList()">📋 列表檢視</button>
         <button class="btn btn-outline" onclick="clearSelection()">🗑️ 清除選擇</button>
-        <!-- 🆕 新增查詢報名按鈕 -->
-        <button class="btn btn-outline" onclick="goToQueryPage()">🔍 查詢我的報名</button>
     </div>
 
     <!-- 月曆檢視 -->
@@ -769,28 +767,7 @@ function updateViewButtons() {
         calendarBtn.classList.remove('btn-active');
     }
 }
- * 🆕 跳轉到查詢頁面
- */
-function goToQueryPage() {
-    // 準備 URL 參數
-    const params = new URLSearchParams();
-    
-    // 傳遞據點資訊
-    if (siteKeyword) {
-        params.append('site', siteKeyword);
-    }
-    
-    // 如果有 LIFF 用戶資訊，也一併傳遞
-    if (isLiffReady && userProfile) {
-        params.append('lineId', userProfile.userId);
-        params.append('lineName', userProfile.displayName);
-    }
-    
-    // 跳轉到查詢頁面
-    const queryUrl = `query.html${params.toString() ? '?' + params.toString() : ''}`;
-    window.location.href = queryUrl;
-}
-    
+
 // 渲染月曆
 function renderCalendar() {
     const monthDisplay = document.getElementById('currentMonth');
